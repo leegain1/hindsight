@@ -1,0 +1,51 @@
+{
+  "name": "HINDSIGHT+",
+  "short_name": "HINDSIGHT+",
+  "description": "성분을 알면 선택이 달라진다. 제품 바코드를 스캔해 첨가물·알러지·건강 위험을 즉시 확인하세요.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F5F2EC",
+  "theme_color": "#0A0A0A",
+  "lang": "ko",
+  "categories": ["health", "food", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "바코드 스캔",
+      "short_name": "스캔",
+      "description": "제품 바코드를 스캔합니다",
+      "url": "/scan",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "커뮤니티",
+      "short_name": "커뮤니티",
+      "description": "커뮤니티 피드를 봅니다",
+      "url": "/community",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

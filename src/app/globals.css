@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F5F2EC;
+  --foreground: #0A0A0A;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Emoji font stack — Apple Color Emoji first for iOS/macOS,
+     Segoe UI Emoji for Windows, Noto Color Emoji for Android/Linux */
+  font-family:
+    'Space Grotesk',
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji",
+    sans-serif;
+}
+
+/* ── Mobile touch fixes ──────────────────────────────────────────────────────
+   1. Remove the 300ms tap delay on all interactive elements (iOS Safari).
+   2. Suppress the default grey/blue tap-highlight flash (iOS).
+   3. Ensure a minimum 44px hit area on buttons/links that have no explicit padding.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Remove default tap highlight on every element */
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Eliminate 300ms click delay — allow panning (scrolling) but skip double-tap-zoom */
+a,
+button,
+[role="button"],
+input,
+label,
+select,
+summary,
+textarea {
+  touch-action: manipulation;
+}
+
+/* Minimum 44 × 44 px touch target for bare icon/text buttons.
+   Uses padding so the visible label size is unchanged. */
+button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Horizontal-scroll strips: tell iOS the intent is pan-x only so the
+   browser doesn't cancel the gesture trying to decide scroll direction. */
+.scroll-x {
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch; /* legacy iOS momentum scrolling */
+  overflow-x: auto;
+}
