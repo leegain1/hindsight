@@ -11,7 +11,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Supabase 미설정 시 인증 게이트를 통과시킨다.
+  // 데모 모드에서는 인증 게이트를 통과시킨다.
+  //
+  // Supabase 인증은 네트워크를 탄다. 발표장에 인터넷이 없으면 로그인 자체가
+  // 불가능하고, 그러면 /profile · /onboarding 이 로그인 화면으로 튕겨서
+  // 탭 두 개를 아예 못 보여준다. 화면을 보여주는 게 목적인 자리에서
+  // 로그인 강제는 얻는 것 없이 데모만 막는다.
+  //
+  //   .env.local 에  NEXT_PUBLIC_DEMO_MODE=1
+  //
+  // 을 넣으면 켜진다. 지우면 원래 인증 흐름으로 돌아온다.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === "1") {
+    return NextResponse.next();
+  }
+
+  // Supabase 미설정 시에도 통과시킨다.
   //
   // 예전에는 env 를 `!` 로 단언하고 곧장 createServerClient 를 불러서, 키가 없으면
   // /profile · /onboarding 이 500 으로 죽었다. 키를 아직 못 받은 상태에서도 화면을

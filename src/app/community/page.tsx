@@ -142,8 +142,11 @@ export default function CommunityPage() {
 
   useEffect(() => {
     async function load() {
-      // Supabase 가 없으면 목 데이터로 채운다. 커뮤니티가 텅 비어 있으면
-      // "사용자 평판이 쌓인다"는 해자 주장을 화면으로 보여줄 수 없다.
+      // 목 데이터로 채우는 조건이 "Supabase 가 없을 때" 였는데, 그러면
+      // Supabase 는 붙었지만 테이블이 비어 있는 상태 — 마이그레이션 전이거나
+      // 발표장처럼 네트워크가 없는 상태 — 에서 커뮤니티가 통째로 사라진다.
+      // 화면 입장에서 "연결이 없다" 와 "글이 없다" 는 다른 얘기다.
+      // 조건을 "가져온 글이 없을 때" 로 바꾼다.
       if (!supabase) {
         setPosts(sortMockPosts(sort) as unknown as Post[]);
         setLoading(false);
@@ -160,7 +163,8 @@ export default function CommunityPage() {
         `)
         .order(orderCol, { ascending: false })
         .limit(30);
-      setPosts((data as Post[]) ?? []);
+      const fetched = (data as Post[]) ?? [];
+      setPosts(fetched.length > 0 ? fetched : (sortMockPosts(sort) as unknown as Post[]));
       setLoading(false);
     }
     void load();
