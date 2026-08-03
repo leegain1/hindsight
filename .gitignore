@@ -31,3 +31,6 @@ skills-lock.json
 
 # IDE
 .idea/
+
+# 로컬 스킬 심볼릭 링크
+.claude/skills/
