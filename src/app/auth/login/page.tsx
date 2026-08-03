@@ -34,6 +34,14 @@ function LoginForm() {
     setError("");
     setLoading(true);
 
+    // Supabase 키가 없으면 supabase 는 null 이다. 가드 없이 .auth 를 부르면
+    // 화면이 그대로 죽는다 — 왜 안 되는지 알려주고 멈춘다.
+    if (!supabase) {
+      setError("로그인 서버가 아직 연결되지 않았어요. 관리자에게 문의해주세요.");
+      setLoading(false);
+      return;
+    }
+
     if (mode === "signup") {
       const { data, error: err } = await supabase.auth.signUp({
         email,
@@ -67,6 +75,13 @@ function LoginForm() {
   const handleMagicLink = async () => {
     if (!email) { setError("이메일을 입력해주세요."); return; }
     setLoading(true);
+    // Supabase 키가 없으면 supabase 는 null 이다. 가드 없이 .auth 를 부르면
+    // 화면이 그대로 죽는다 — 왜 안 되는지 알려주고 멈춘다.
+    if (!supabase) {
+      setError("로그인 서버가 아직 연결되지 않았어요. 관리자에게 문의해주세요.");
+      setLoading(false);
+      return;
+    }
     const { error: err } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${next}` },
@@ -76,6 +91,10 @@ function LoginForm() {
   };
 
   const handleGoogle = async () => {
+    if (!supabase) {
+      setError("로그인 서버가 아직 연결되지 않았어요. 관리자에게 문의해주세요.");
+      return;
+    }
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback?next=${next}` },
