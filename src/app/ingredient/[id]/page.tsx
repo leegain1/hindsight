@@ -65,13 +65,18 @@ function RiskGauge({ score }: { score: number }) {
         </span>
       </div>
       <div style={{ height: 6, background: "#EDEAE3", borderRadius: 3, overflow: "hidden" }}>
+        {/* width 가 아니라 clip-path 로 잘라낸다.
+            width 애니메이션은 매 프레임 레이아웃을 다시 계산시키고,
+            scaleX 를 쓰면 그라디언트 색까지 같이 늘어난다.
+            clip-path 는 합성 단계에서 처리되고 그라디언트 기하가 유지된다. */}
         <div
           style={{
             height: "100%",
-            width: `${pct}%`,
+            width: "100%",
             background: `linear-gradient(90deg, #2A8A5C 0%, #C4780A 40%, #C05000 70%, #C44B4B 100%)`,
             borderRadius: 3,
-            transition: "width 1s ease",
+            clipPath: `inset(0 ${100 - pct}% 0 0)`,
+            transition: "clip-path 1s cubic-bezier(0.22, 1, 0.36, 1)",
           }}
         />
       </div>
