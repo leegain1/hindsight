@@ -23,3 +23,11 @@ npm-debug.log*
 
 # local settings
 .claude/settings.local.json
+.gstack/
+
+# 에이전트 도구 아티팩트 (프로젝트 코드 아님 — npx skills add 로 재설치 가능)
+.agents/
+skills-lock.json
+
+# IDE
+.idea/
