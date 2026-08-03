@@ -786,6 +786,13 @@ function CompareTable({
         ? a
         : b;
 
+  const allergyA = hitsFor(a, profile.allergies);
+  const allergyB = hitsFor(b, profile.allergies);
+  const avoidA = hitsFor(a, profile.avoid);
+  const avoidB = hitsFor(b, profile.avoid);
+  const catLabel = (p: RankedProduct) =>
+    CATEGORIES.find((c) => c.slug === p.category)?.nameKo ?? p.category;
+
   const rows: { label: string; a: React.ReactNode; b: React.ReactNode }[] = [
     {
       label: "종합 점수",
@@ -793,9 +800,29 @@ function CompareTable({
       b: <Score p={b} />,
     },
     {
+      label: "등급",
+      a: <Grade score={a.score} />,
+      b: <Grade score={b.score} />,
+    },
+    {
       label: "내 조건 판정",
       a: <Verdict hits={hitsA} hasProfile={hasProfile} />,
       b: <Verdict hits={hitsB} hasProfile={hasProfile} />,
+    },
+    {
+      label: "알레르기",
+      a: <Flag hits={allergyA} hasProfile={profile.allergies.length > 0} safe="해당 없음" />,
+      b: <Flag hits={allergyB} hasProfile={profile.allergies.length > 0} safe="해당 없음" />,
+    },
+    {
+      label: "기피 성분",
+      a: <Flag hits={avoidA} hasProfile={profile.avoid.length > 0} safe="해당 없음" />,
+      b: <Flag hits={avoidB} hasProfile={profile.avoid.length > 0} safe="해당 없음" />,
+    },
+    {
+      label: "주의 항목",
+      a: <Count n={a.warnings.length} tone={a.warnings.length ? WARN : GOOD} unit="건" />,
+      b: <Count n={b.warnings.length} tone={b.warnings.length ? WARN : GOOD} unit="건" />,
     },
     {
       label: "주의 성분",
@@ -806,6 +833,21 @@ function CompareTable({
       label: "장점",
       a: <Bullets items={a.highlights} tone={INK} empty="—" />,
       b: <Bullets items={b.highlights} tone={INK} empty="—" />,
+    },
+    {
+      label: "카테고리",
+      a: <Plain text={catLabel(a)} />,
+      b: <Plain text={catLabel(b)} />,
+    },
+    {
+      label: "브랜드",
+      a: <Plain text={a.brand} />,
+      b: <Plain text={b.brand} />,
+    },
+    {
+      label: "최종 추천",
+      a: <Pick on={a.barcode === winner.barcode} />,
+      b: <Pick on={b.barcode === winner.barcode} />,
     },
   ];
 
@@ -891,6 +933,94 @@ function CompareTable({
         다른 제품 비교하기
       </button>
     </div>
+  );
+}
+
+/** 특정 조건 목록만 대조 — 알레르기와 기피 성분을 행으로 갈라 보여주기 위해 */
+function hitsFor(product: RankedProduct, terms: string[]) {
+  const haystack = [...product.warnings, ...product.highlights, product.name].join(" ");
+  return terms.filter((t) => haystack.includes(t));
+}
+
+const GRADES: { min: number; label: string; color: string }[] = [
+  { min: 85, label: "안전", color: GOOD },
+  { min: 70, label: "양호", color: "#3B7DD4" },
+  { min: 50, label: "주의", color: WARN },
+  { min: 0, label: "위험", color: DANGER },
+];
+
+function Grade({ score }: { score: number }) {
+  const g = GRADES.find((x) => score >= x.min) ?? GRADES[GRADES.length - 1];
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        fontFamily: MONO,
+        fontSize: 9,
+        letterSpacing: "0.3px",
+        color: g.color,
+        background: `${g.color}14`,
+        border: `0.5px solid ${g.color}40`,
+        borderRadius: 999,
+        padding: "4px 9px",
+      }}
+    >
+      {g.label}
+    </span>
+  );
+}
+
+function Flag({ hits, hasProfile, safe }: { hits: string[]; hasProfile: boolean; safe: string }) {
+  if (!hasProfile) {
+    return <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED, letterSpacing: "0.3px" }}>미입력</span>;
+  }
+  if (hits.length === 0) {
+    return <span style={{ fontSize: 11, color: GOOD, lineHeight: 1.6 }}>{safe}</span>;
+  }
+  return (
+    <>
+      {hits.map((h) => (
+        <p key={h} style={{ fontSize: 11, color: DANGER, fontWeight: 500, lineHeight: 1.6 }}>
+          {h}
+        </p>
+      ))}
+    </>
+  );
+}
+
+function Count({ n, tone, unit }: { n: number; tone: string; unit: string }) {
+  return (
+    <span style={{ fontSize: 15, fontWeight: 600, color: tone, letterSpacing: "-0.2px" }}>
+      {n}
+      <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 400, marginLeft: 2 }}>{unit}</span>
+    </span>
+  );
+}
+
+function Plain({ text }: { text: string }) {
+  return <span style={{ fontSize: 11, color: INK, opacity: 0.7, lineHeight: 1.6 }}>{text}</span>;
+}
+
+function Pick({ on }: { on: boolean }) {
+  return on ? (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontFamily: MONO,
+        fontSize: 9,
+        letterSpacing: "0.5px",
+        color: CANVAS,
+        background: GOOD,
+        borderRadius: 999,
+        padding: "4px 9px",
+      }}
+    >
+      ✓ 추천
+    </span>
+  ) : (
+    <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED, letterSpacing: "0.3px" }}>—</span>
   );
 }
 
