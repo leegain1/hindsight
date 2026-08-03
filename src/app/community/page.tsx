@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 
 import { CATEGORIES as CAT_LIST } from "@/lib/categories";
+import { sortMockPosts } from "@/lib/mockCommunity";
 
 const CATEGORY_META: Record<string, { label: string; color: string }> = {
   ...Object.fromEntries(CAT_LIST.map((c) => [c.slug, { label: c.nameKo, color: c.color }])),
@@ -140,7 +141,13 @@ export default function CommunityPage() {
 
   useEffect(() => {
     async function load() {
-      if (!supabase) { setLoading(false); return; }
+      // Supabase 가 없으면 목 데이터로 채운다. 커뮤니티가 텅 비어 있으면
+      // "사용자 평판이 쌓인다"는 해자 주장을 화면으로 보여줄 수 없다.
+      if (!supabase) {
+        setPosts(sortMockPosts(sort) as unknown as Post[]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const orderCol = sort === "popular" ? "likes_count" : "created_at";
       const { data } = await supabase

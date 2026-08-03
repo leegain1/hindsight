@@ -4,6 +4,7 @@ import { use, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { getMockPost } from "@/lib/mockCommunity";
 
 const SENSITIVITY_BADGES: Record<string, { label: string; color: string }> = {
   beginner:      { label: "입문자",    color: "#8A7A2A" },
@@ -89,7 +90,33 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   // Load post + comments + auth state
   useEffect(() => {
     async function load() {
-      if (!supabase) { setLoading(false); return; }
+      // Supabase 가 없으면 목 데이터에서 찾는다 (목록도 같은 소스를 쓴다)
+      if (!supabase) {
+        const mock = getMockPost(String(id));
+        if (mock) {
+          setPost({
+            ...mock,
+            user_id: "mock",
+            fact_check_explanation: null,
+            product_barcode: null,
+            product_name: null,
+            profiles: { ...mock.profiles, email: null },
+          } as unknown as Post);
+          setLikeCount(mock.likes_count);
+          setComments(
+            mock.comments.map((c) => ({
+              id: c.id,
+              post_id: mock.id,
+              user_id: "mock",
+              content: c.body,
+              created_at: c.createdAt,
+              profiles: { name: c.author.name, email: null },
+            })),
+          );
+        }
+        setLoading(false);
+        return;
+      }
       const [postRes, commentsRes, authRes] = await Promise.all([
         supabase
           .from("community_posts")
@@ -137,6 +164,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   // Realtime comments subscription
   useEffect(() => {
+    // Supabase 미설정이면 구독할 대상이 없다 — null 에 .channel() 을 부르면 터진다
+    if (!supabase) return;
     const channel = supabase
       .channel(`post-${id}-comments`)
       .on(
