@@ -13,8 +13,8 @@
  * Supabase 가 없으면 로그인 단계는 그대로 통과시킨다 — 데모가 멈추면 안 된다.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
 const INK = "#0A0A0A";
@@ -52,9 +52,16 @@ const SLIDES = [
 ];
 
 
-export default function WelcomePage() {
+function WelcomeFlow() {
   const router = useRouter();
-  const [phase, setPhase] = useState<Phase>("brand");
+  const searchParams = useSearchParams();
+
+  // 구글 로그인은 페이지를 떠났다 돌아온다. ?step=intro 로 돌아오면 브랜드
+  // 애니메이션과 로그인 단계를 건너뛰고 소개부터 이어 붙인다 — 이미 로그인한
+  // 사람에게 로그인 화면을 다시 보여주면 흐름이 끊긴다.
+  const [phase, setPhase] = useState<Phase>(
+    searchParams.get("step") === "intro" ? "intro" : "brand",
+  );
   const [slide, setSlide] = useState(0);
 
   const [email, setEmail] = useState("");
@@ -110,6 +117,31 @@ export default function WelcomePage() {
     // Supabase 미설정이면 그대로 통과 — 데모는 계속 돌아야 한다
     setBusy(false);
     setPhase("intro");
+  };
+
+  const handleGoogle = async () => {
+    setAuthError("");
+
+    const supabase = createClient();
+    // 이메일 경로와 같은 규칙 — Supabase 가 없으면 막지 않고 통과시킨다
+    if (!supabase) {
+      setPhase("intro");
+      return;
+    }
+
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/welcome?step=intro")}`,
+      },
+    });
+
+    // 성공하면 브라우저가 구글로 넘어가므로 busy 를 되돌릴 필요가 없다
+    if (error) {
+      setBusy(false);
+      setAuthError("구글 로그인을 시작할 수 없었어요. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   const dark = phase === "brand" || phase === "login";
@@ -221,6 +253,46 @@ export default function WelcomePage() {
               <p style={{ fontFamily: MONO, fontSize: 9, color: "#4A4A48", letterSpacing: "2px", marginBottom: 16 }}>
                 SIGN IN
               </p>
+
+              {/* 소셜 먼저 — 대부분은 여기서 끝난다. 채우기가 아니라 입력칸과
+                  같은 재질(반투명 크림)을 써서 아래 크림색 버튼 하나만
+                  주 액션으로 남게 한다. */}
+              <button
+                type="button"
+                onClick={() => void handleGoogle()}
+                disabled={busy}
+                style={{
+                  width: "100%",
+                  padding: "15px 16px",
+                  background: "rgba(245,242,236,0.06)",
+                  border: "0.5px solid rgba(245,242,236,0.14)",
+                  borderRadius: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 9,
+                  fontFamily: SANS,
+                  fontSize: 14,
+                  fontWeight: 400,
+                  color: CANVAS,
+                  cursor: busy ? "default" : "pointer",
+                  touchAction: "manipulation",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                Google로 계속하기
+              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0" }}>
+                <div style={{ flex: 1, height: "0.5px", background: "rgba(245,242,236,0.12)" }} />
+                <span style={{ fontFamily: MONO, fontSize: 8, color: "#4A4A48", letterSpacing: "1px" }}>OR</span>
+                <div style={{ flex: 1, height: "0.5px", background: "rgba(245,242,236,0.12)" }} />
+              </div>
 
               <input
                 type="email"
@@ -443,6 +515,18 @@ export default function WelcomePage() {
         </div>
       )}
     </main>
+  );
+}
+
+/**
+ * useSearchParams 는 Suspense 경계 안에서만 쓸 수 있다.
+ * fallback 은 브랜드 화면과 같은 검은 배경 — 첫 프레임이 하얗게 튀지 않게.
+ */
+export default function WelcomePage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100dvh", background: INK }} />}>
+      <WelcomeFlow />
+    </Suspense>
   );
 }
 
