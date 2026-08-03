@@ -15,6 +15,9 @@
 .env*
 !.env*.example
 
+# vercel — link 시 프로젝트/조직 ID 가 생긴다. 로컬 링크 정보라 커밋하지 않는다
+.vercel
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
