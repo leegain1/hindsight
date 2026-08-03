@@ -107,7 +107,38 @@ export default function ProfilePage() {
         .select("*")
         .eq("id", user.id)
         .single();
-      setProfile(profileData);
+
+      /**
+       * 구글 로그인은 이름을 user_metadata 에 담아서 온다. 그런데 가입 시
+       * profiles 를 채우는 트리거(handle_new_user)는 id·email 만 넣기 때문에
+       * profiles.name 이 비어 있다 — 그대로 두면 화면에 이메일 앞부분이
+       * 이름처럼 뜬다.
+       *
+       * 메타데이터에서 이름을 꺼내 쓰고, 다음 방문부터는 조회 한 번으로
+       * 끝나도록 profiles 에 되메꿔 둔다. (RLS 의 profiles_update_own 이
+       * 본인 행 수정을 허용한다)
+       */
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      const metaName =
+        [meta.full_name, meta.name, meta.user_name]
+          .find((v): v is string => typeof v === "string" && v.trim().length > 0)
+          ?.trim() ?? null;
+
+      let resolved = profileData as Profile | null;
+      if (!resolved) {
+        // 트리거가 안 돌았거나 행이 없는 경우 — 계정 정보로 화면을 채운다
+        resolved = {
+          id: user.id,
+          email: user.email ?? "",
+          name: metaName,
+          sensitivity_type: null,
+          onboarding_completed: false,
+        };
+      } else if (!resolved.name?.trim() && metaName) {
+        await supabase.from("profiles").update({ name: metaName }).eq("id", user.id);
+        resolved = { ...resolved, name: metaName };
+      }
+      setProfile(resolved);
 
       const { data: history } = await supabase
         .from("scan_history")
@@ -136,14 +167,27 @@ export default function ProfilePage() {
   }, [router, supabase]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    // supabase 는 키가 없으면 null 이다. 가드 없이 .auth 를 부르면 로그아웃
+    // 버튼을 누른 순간 화면이 그대로 죽는다.
+    if (supabase) await supabase.auth.signOut();
     router.replace("/");
   };
 
   // 서버 값이 우선. Supabase 키가 없으면 온보딩이 로컬에 남긴 결과로 대체한다
   const sensitivityType = profile?.sensitivity_type ?? localSensitivity;
   const profileMeta = sensitivityType ? PROFILE_META[sensitivityType] : null;
-  const displayName = profile?.name ?? profile?.email?.split("@")[0] ?? "게스트";
+  /**
+   * 계정에서 가져온 이름. 없으면 null 이고, 그때는 제목을 "내 프로필" 로 둔다 —
+   * "게스트님의 프로필" 은 사람 이름 자리에 들어갈 말이 아니다.
+   * ?? 대신 || 를 쓴다. 빈 문자열도 없는 것으로 봐야 한다.
+   */
+  const rawName = profile?.name?.trim() || profile?.email?.split("@")[0] || null;
+  /**
+   * 제목은 28px/700 한 줄 규격이다. 이름이 길면(구글 표시 이름이나 이메일
+   * 앞부분이 긴 경우) 제목이 세 줄로 흘러 헤더가 무너진다. 그래서 자른다.
+   */
+  const accountName =
+    rawName && rawName.length > 14 ? `${rawName.slice(0, 14)}…` : rawName;
 
   if (loading) {
     return (
@@ -167,11 +211,10 @@ export default function ProfilePage() {
 
       <PageHeader
         eyebrow="PROFILE"
-        title="내 프로필"
+        title={accountName ? `${accountName}님의 프로필` : "내 프로필"}
         subtitle={
-          profileMeta
-            ? `${displayName} · ${profileMeta.label}`
-            : `${displayName} · 개인 맞춤 분석 미설정`
+          // 이름이 제목으로 올라갔으므로 부제에서 다시 부르지 않는다
+          profileMeta ? profileMeta.label : "개인 맞춤 분석 미설정"
         }
       />
 
