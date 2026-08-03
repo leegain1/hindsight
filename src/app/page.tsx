@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { CATEGORIES } from "@/lib/categories";
 import { getCategoryTop1s, getScoreBadgeColor } from "@/lib/productData";
+import ChatModal from "@/components/ChatModal";
 
 const FALLBACK_FACTS = [
   { category: "가공식품", title: "아질산나트륨이 암을 유발한다?", verdict: "부분사실", verdictColor: "#6B52D4", query: "아질산나트륨 발암 위험" },
@@ -48,6 +49,7 @@ export default function Home() {
   const [factsLoading, setFactsLoading] = useState(true);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const [popularPosts, setPopularPosts] = useState<CommunityPost[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Load today's facts (with localStorage cache)
   useEffect(() => {
@@ -111,9 +113,13 @@ export default function Home() {
     })();
   }, [supabase]);
 
+  // 히어로 검색창도 챗봇으로 보낸다 — 질의 창구가 두 개면 어느 쪽이 뭔지 헷갈린다
+  const [chatQuery, setChatQuery] = useState("");
   const handleSearch = () => {
     if (!query.trim()) return;
-    router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    setChatQuery(query.trim());
+    setChatOpen(true);
+    setQuery("");
   };
 
   return (
@@ -575,10 +581,11 @@ export default function Home() {
 
       </div>
 
-      {/* AI 챗봇 — 탭바에서 내려온 검색(AI 질의)의 새 자리.
-          탭바(64px) 바로 위 우측 하단에 떠 있는다. */}
-      <Link
-        href="/search"
+      {/* AI 챗봇 — 페이지 이동이 아니라 모달로 연다.
+          홈이 뒤에 비쳐야 "앱을 떠나지 않았다"는 감각이 유지된다. */}
+      <button
+        type="button"
+        onClick={() => setChatOpen(true)}
         aria-label="AI 에게 물어보기"
         style={{
           position: "fixed",
@@ -587,12 +594,17 @@ export default function Home() {
           zIndex: 90,
           width: 54,
           height: 54,
+          minHeight: 0,
+          minWidth: 0,
+          padding: 0,
           borderRadius: "50%",
           background: "#0A0A0A",
+          border: "none",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          textDecoration: "none",
+          cursor: "pointer",
+          touchAction: "manipulation",
           boxShadow: "0 4px 16px rgba(10,10,10,0.22)",
         }}
       >
@@ -607,7 +619,17 @@ export default function Home() {
           <circle cx="12" cy="10" r="1" fill="#F5F2EC" />
           <circle cx="15.3" cy="10" r="1" fill="#F5F2EC" />
         </svg>
-      </Link>
+      </button>
+
+      {chatOpen && (
+        <ChatModal
+          initialQuery={chatQuery}
+          onClose={() => {
+            setChatOpen(false);
+            setChatQuery("");
+          }}
+        />
+      )}
     </main>
   );
 }
