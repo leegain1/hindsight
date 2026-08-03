@@ -21,26 +21,17 @@ const tabs = [
     match: (p: string) => p === "/",
   },
   {
-    label: "SEARCH",
-    href: "/search",
+    // 검색(AI 질의)은 홈의 플로팅 버튼으로 옮기고, 이 자리는 제품 비교가 쓴다
+    label: "COMPARE",
+    href: "/compare",
     icon: (active: boolean) => (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <circle
-          cx="7.5"
-          cy="7.5"
-          r="5"
-          stroke={active ? "#0A0A0A" : "#8A8880"}
-          strokeWidth="1.2"
-        />
-        <path
-          d="M11.5 11.5L15.5 15.5"
-          stroke={active ? "#0A0A0A" : "#8A8880"}
-          strokeWidth="1.2"
-          strokeLinecap="round"
-        />
+        <rect x="2" y="4" width="5.5" height="11" rx="1" stroke={active ? "#0A0A0A" : "#8A8880"} strokeWidth="1.2" />
+        <rect x="10.5" y="7" width="5.5" height="8" rx="1" stroke={active ? "#0A0A0A" : "#8A8880"} strokeWidth="1.2" />
+        <path d="M9.25 2v14" stroke={active ? "#0A0A0A" : "#8A8880"} strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1.5 2" />
       </svg>
     ),
-    match: (p: string) => p.startsWith("/search"),
+    match: (p: string) => p.startsWith("/compare"),
   },
   {
     label: "SCAN",
@@ -96,8 +87,17 @@ const tabs = [
   },
 ];
 
+/**
+ * 탭바를 숨길 경로.
+ * 첫 진입 흐름(브랜드 → 로그인 → 앱 소개 → 개인 맞춤 설문)은 홈에 들어오기 전
+ * 단계라 탭바가 보이면 안 된다. 아직 "앱 안"이 아니기 때문이다.
+ */
+const HIDE_ON = ["/welcome", "/onboarding", "/auth"];
+
 export default function BottomNav() {
   const pathname = usePathname();
+
+  if (HIDE_ON.some((p) => pathname.startsWith(p))) return null;
 
   return (
     <>
