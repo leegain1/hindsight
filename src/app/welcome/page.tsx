@@ -173,7 +173,6 @@ function WelcomeFlow() {
           from { transform: scaleX(0); }
           to   { transform: scaleX(1); }
         }
-        @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
         @keyframes riseIn  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
         @keyframes panelUp { from { transform: translateY(100%); } to { transform: none; } }
         @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
@@ -183,14 +182,13 @@ function WelcomeFlow() {
         .rule      { animation: lineGrow 700ms cubic-bezier(0.22, 1, 0.36, 1) 700ms both; transform-origin: left; }
         .tagline   { animation: fadeIn 600ms ease-out 1000ms both; }
         .panel     { animation: panelUp 520ms cubic-bezier(0.32, 0.72, 0, 1) both; }
-        .rise      { animation: riseIn 460ms ease-out both; }
+        .hero-rise { animation: riseIn 460ms var(--ease-out-quart) both; }
         .slide     { animation: slideIn 460ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
         input::placeholder { color: rgba(245,242,236,0.3); }
-        button:active { opacity: 0.85; }
 
         @media (prefers-reduced-motion: reduce) {
-          .mark, .wordmark, .rule, .tagline, .panel, .rise, .slide { animation-duration: 1ms; }
+          .mark, .wordmark, .rule, .tagline, .panel, .hero-rise, .slide { animation-duration: 1ms; }
         }
       `}</style>
 
@@ -381,6 +379,7 @@ function WelcomeFlow() {
               <button
                 key={s.key}
                 type="button"
+                data-press="off"
                 aria-label={`${i + 1}번째 소개로 이동`}
                 onClick={() => {
                   setPhase("intro");
@@ -408,6 +407,7 @@ function WelcomeFlow() {
               <button
                 type="button"
                 onClick={advance}
+                data-press="off"
                 aria-label="다음 소개 보기"
                 style={{
                   flex: 1,
@@ -451,7 +451,7 @@ function WelcomeFlow() {
             </>
           ) : (
             <>
-              <div className="rise" style={{ flex: 1 }}>
+              <div className="hero-rise" style={{ flex: 1 }}>
                 <p style={{ fontFamily: MONO, fontSize: 9, color: MUTED, letterSpacing: "2px", marginBottom: 14 }}>
                   LAST STEP
                 </p>

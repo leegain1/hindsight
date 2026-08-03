@@ -85,12 +85,12 @@ export default function ComparePage() {
     <main style={{ minHeight: "100dvh", background: CANVAS, fontFamily: SANS, paddingBottom: 64 }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-        .rise { animation: fadeUp 340ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-        button:active { opacity: 0.85; }
+        /* 표는 위에서 아래로 채워진다 — 11행을 한꺼번에 던지면 읽을 곳을 잃는다.
+           .stagger 대신 별도 클래스를 쓴다: 행은 flex 컨테이너라 기본 등장에
+           translateY 를 얹으면 테두리가 어긋나 보인다. */
+        .row-in { animation: fadeIn var(--dur-state) var(--ease-out-quart) backwards; animation-delay: calc(min(var(--i, 0), 9) * 35ms); }
         .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .scroll-x::-webkit-scrollbar { display: none; }
-        @media (prefers-reduced-motion: reduce) { .rise { animation: none; } }
       `}</style>
 
       <PageHeader
@@ -493,6 +493,9 @@ function DirectCompare({
       role="dialog"
       aria-modal="true"
       aria-label="두 제품 직접 비교"
+      // 전체 화면을 덮는 패널이 아무 예고 없이 나타나면 화면이 바뀐 게 아니라
+      // 깨진 것처럼 읽힌다. 아래에서 올라오면 "위에 얹혔다"가 전달된다.
+      className="sheet-panel"
       style={{
         position: "fixed",
         inset: 0,
@@ -868,8 +871,8 @@ function CompareTable({
           ))}
         </div>
 
-        {rows.map((r) => (
-          <div key={r.label} style={{ display: "flex", borderBottom: `0.5px solid ${HAIRLINE}` }}>
+        {rows.map((r, i) => (
+          <div key={r.label} className="row-in" style={{ ["--i" as string]: i, display: "flex", borderBottom: `0.5px solid ${HAIRLINE}` }}>
             <div style={{ width: 78, flexShrink: 0, padding: "12px 10px", background: CARD }}>
               <p style={{ fontFamily: MONO, fontSize: 9, color: MUTED, letterSpacing: "0.3px", lineHeight: 1.5 }}>
                 {r.label}

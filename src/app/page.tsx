@@ -133,7 +133,6 @@ export default function Home() {
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input::placeholder { color: rgba(10,10,10,0.3); }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes shimmer {
           0%{background-position:-400px 0}
           100%{background-position:400px 0}
@@ -502,13 +501,15 @@ export default function Home() {
                 alignItems: "center",
                 gap: 5,
               }}>
-                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#D8D4CC", animation: "pulse 1.2s ease-in-out infinite" }} />
+                <div className="skeleton" style={{ width: 5, height: 5, borderRadius: "50%", background: "#D8D4CC" }} />
                 <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "1px" }}>LIVE</span>
               </div>
             )}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* 스켈레톤과 실제 카드가 즉시 교체돼 깜빡였다. 두 상태 모두
+              페이드로 들어오고, 카드는 순서대로 올라온다. */}
+          <div className={factsLoading ? "fade-in" : "stagger"} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {factsLoading
               ? Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="shimmer" style={{ height: 88, borderRadius: 12 }} />
@@ -519,6 +520,7 @@ export default function Home() {
                     className="fact-card"
                     onClick={() => router.push(`/search?q=${encodeURIComponent(fact.query)}`)}
                     style={{
+                      ["--i" as string]: i,
                       background: i === 0 ? "#0A0A0A" : "#EDEAE3",
                       border: `0.5px solid ${i === 0 ? "#2A2A2A" : "#D8D4CC"}`,
                       borderRadius: 12,

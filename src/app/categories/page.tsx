@@ -43,9 +43,9 @@ export default function CategoriesPage() {
         </h2>
 
         {/* 2-column grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {CATEGORIES.map((cat) => (
-            <Link key={cat.slug} href={`/categories/${cat.slug}`} style={{ textDecoration: "none" }}>
+        <div className="stagger" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {CATEGORIES.map((cat, i) => (
+            <Link key={cat.slug} href={`/categories/${cat.slug}`} style={{ ["--i" as string]: i, textDecoration: "none" }}>
               <div
                 className="cat-card"
                 style={{
@@ -57,7 +57,7 @@ export default function CategoriesPage() {
                   flexDirection: "column",
                   gap: 10,
                   cursor: "pointer",
-                  transition: "opacity 0.15s",
+                  transition: "opacity var(--dur-state), transform var(--dur-press) var(--ease-out-quart)",
                   minHeight: 120,
                 }}
               >

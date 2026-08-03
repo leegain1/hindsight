@@ -180,9 +180,6 @@ export default function ScanPage() {
           0%, 100% { opacity: 1; transform: scaleX(1); }
           50%       { opacity: 0.4; transform: scaleX(0.85); }
         }
-        @keyframes spin    { to { transform: rotate(360deg); } }
-        @keyframes fadeUp  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
 
       {/* ── Off-screen anchor for file-scan (never intercepts touches) ── */}
@@ -688,14 +685,13 @@ export default function ScanPage() {
               animation: "fadeUp 0.2s ease",
             }}
           >
-            <div
+            <div className="spin"
               style={{
                 width: 40,
                 height: 40,
                 border: "2px solid #EDEAE3",
                 borderTopColor: "#0A0A0A",
                 borderRadius: "50%",
-                animation: "spin 0.8s linear infinite",
               }}
             />
             <div style={{ textAlign: "center" }}>

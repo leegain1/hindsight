@@ -148,8 +148,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <main style={{ minHeight: "100dvh", background: "#F5F2EC", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <div style={{ width: 20, height: 20, border: "1px solid #D8D4CC", borderTopColor: "#0A0A0A", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <div className="spin" style={{ width: 20, height: 20, border: "1px solid #D8D4CC", borderTopColor: "#0A0A0A", borderRadius: "50%", }} />
       </main>
     );
   }
@@ -201,12 +200,13 @@ export default function ProfilePage() {
                 background: "none",
                 border: "none",
                 borderBottom: active ? "1px solid #0A0A0A" : "1px solid transparent",
+                // 색과 밑줄이 같이 넘어가야 탭이 "이동한" 것처럼 읽힌다
                 fontFamily: "'DM Mono', monospace",
                 fontSize: 8,
                 color: active ? "#0A0A0A" : "#8A8880",
                 letterSpacing: "2px",
                 cursor: "pointer",
-                transition: "color 0.15s",
+                transition: "color var(--dur-state) var(--ease-out-quart), border-color var(--dur-state) var(--ease-out-quart)",
               }}
             >
               {labels[tab]}
@@ -218,18 +218,20 @@ export default function ProfilePage() {
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 28px" }}>
 
         {/* SCAN HISTORY TAB */}
+        {/* key 를 탭에 묶어 탭이 바뀔 때마다 등장이 다시 재생되게 한다 */}
         {activeTab === "history" && (
-          <div style={{ paddingTop: 32 }}>
+          <div key="history" style={{ paddingTop: 32 }}>
             {/* 저장한 분석 — 사용자가 직접 남긴 것이라 최근 스캔보다 위에 둔다 */}
             {savedAnalyses.length > 0 && (
-              <section style={{ marginBottom: 34 }}>
+              <section className="stagger" style={{ marginBottom: 34 }}>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "2.5px", marginBottom: 14 }}>
                   SAVED · 저장함 {savedAnalyses.length}
                 </p>
-                {savedAnalyses.map((s) => (
+                {savedAnalyses.map((s, i) => (
                   <div
                     key={s.id}
                     style={{
+                      ["--i" as string]: i,
                       display: "flex",
                       alignItems: "center",
                       gap: 12,
@@ -260,14 +262,15 @@ export default function ProfilePage() {
             )}
 
             {/* 최근 스캔 — 서버 이력 > 로컬 기록 > 목 데이터 순으로 채운다 */}
-            <section>
+            <section className="stagger">
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "2.5px", marginBottom: 14 }}>
                 RECENT · 최근 스캔
               </p>
 
               {scanHistory.length > 0 ? (
-                scanHistory.map((s) => (
+                scanHistory.map((s, i) => (
                   <ScanRow
+                    index={i}
                     key={s.id}
                     name={s.product_name || "알 수 없는 제품"}
                     sub={`${s.barcode} · ${new Date(s.scanned_at).toLocaleDateString("ko-KR")}`}
@@ -277,8 +280,9 @@ export default function ProfilePage() {
                   />
                 ))
               ) : localScans.length > 0 ? (
-                localScans.map((s) => (
+                localScans.map((s, i) => (
                   <ScanRow
+                    index={i}
                     key={s.barcode}
                     name={s.name}
                     sub={s.barcode}
@@ -288,8 +292,9 @@ export default function ProfilePage() {
                   />
                 ))
               ) : (
-                MOCK_SCANS.map((s) => (
+                MOCK_SCANS.map((s, i) => (
                   <ScanRow
+                    index={i}
                     key={s.barcode}
                     name={s.name}
                     sub={`${s.brand} · ${s.via === "photo" ? "사진 분석" : "바코드"}`}
@@ -309,7 +314,7 @@ export default function ProfilePage() {
 
         {/* MY POSTS TAB */}
         {activeTab === "posts" && (
-          <div style={{ paddingTop: 32 }}>
+          <div key="posts" className="fade-in" style={{ paddingTop: 32 }}>
             {myPosts.length === 0 ? (
               <div style={{ paddingTop: 48, textAlign: "center" }}>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880", letterSpacing: "2px", marginBottom: 12 }}>
@@ -368,7 +373,7 @@ export default function ProfilePage() {
 
         {/* SETTINGS TAB */}
         {activeTab === "settings" && (
-          <div style={{ paddingTop: 32 }}>
+          <div key="settings" className="fade-in" style={{ paddingTop: 32 }}>
 
             {/* Sensitivity profile row */}
             <div style={{ paddingBottom: 20, borderBottom: "0.5px solid #D8D4CC", marginBottom: 0 }}>
@@ -539,18 +544,22 @@ function ScanRow({
   score,
   color,
   onClick,
+  index = 0,
 }: {
   name: string;
   sub: string;
   score: number;
   color: string;
   onClick: () => void;
+  /** 목록에서의 순서 — 부모의 .stagger 가 이 값으로 지연을 준다 */
+  index?: number;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
+        ["--i" as string]: index,
         width: "100%",
         display: "flex",
         alignItems: "center",

@@ -291,9 +291,6 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
       `}</style>
 
       {/* Header */}
@@ -360,7 +357,7 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
 
       {/* Content — always rendered from fallback, no spinner blocking */}
       {data && (
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "28px 20px 0", animation: "fadeIn 0.3s ease" }}>
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "28px 20px 0", animation: "fadeUp var(--dur-reveal) var(--ease-out-quint) both" }}>
 
           {/* Product Ranking */}
           {rankedProducts.length > 0 && (
@@ -568,18 +565,23 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
                       style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "none", border: "none", cursor: "pointer", gap: 12, textAlign: "left" }}
                     >
                       <p style={{ fontSize: 13, fontWeight: 400, color: "#0A0A0A", lineHeight: 1.4, flex: 1 }}>{faq.question}</p>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, transform: openFaq === i ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, transform: openFaq === i ? "rotate(180deg)" : "none", transition: "transform var(--dur-state) var(--ease-out-quart)" }}>
                         <path d="M2 4L7 10L12 4" stroke="#8A8880" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
-                    {openFaq === i && (
-                      <div style={{ padding: "0 16px 16px" }}>
-                        <p style={{ fontSize: 12, fontWeight: 300, color: "#0A0A0A", lineHeight: 1.6, marginBottom: 10 }}>{faq.answer}</p>
-                        <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, background: "#F5F2EC", border: "0.5px solid #D8D4CC", fontFamily: "'DM Mono', monospace", fontSize: 8, color: faq.verdictColor, letterSpacing: "0.5px" }}>
-                          {faq.verdict}
-                        </span>
+                    {/* 조건부 렌더에서 grid 펼치기로 바꿨다. 내용이 DOM 에서
+                        사라졌다 나타나면 애니메이션할 대상 자체가 없다.
+                        aria-hidden 으로 닫힌 답변은 스크린리더에서도 빼둔다. */}
+                    <div className="collapsible" data-open={openFaq === i} aria-hidden={openFaq !== i}>
+                      <div>
+                        <div style={{ padding: "0 16px 16px" }}>
+                          <p style={{ fontSize: 12, fontWeight: 300, color: "#0A0A0A", lineHeight: 1.6, marginBottom: 10 }}>{faq.answer}</p>
+                          <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, background: "#F5F2EC", border: "0.5px solid #D8D4CC", fontFamily: "'DM Mono', monospace", fontSize: 8, color: faq.verdictColor, letterSpacing: "0.5px" }}>
+                            {faq.verdict}
+                          </span>
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>

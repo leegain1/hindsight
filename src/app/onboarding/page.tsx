@@ -133,11 +133,7 @@ export default function OnboardingPage() {
     >
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-        .rise { animation: fadeUp 380ms cubic-bezier(0.22, 1, 0.36, 1) both; }
         input::placeholder { color: rgba(10,10,10,0.28); }
-        button:active { opacity: 0.85; }
-        @media (prefers-reduced-motion: reduce) { .rise { animation: none; } }
       `}</style>
 
       {/* 진행 바 */}

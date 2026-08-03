@@ -65,3 +65,136 @@ button {
   -webkit-overflow-scrolling: touch; /* legacy iOS momentum scrolling */
   overflow-x: auto;
 }
+
+/* ── 모션 시스템 ─────────────────────────────────────────────────────────────
+   앱의 모든 애니메이션은 여기서 나온다. 전에는 @keyframes spin 이 8개 파일에
+   각각 정의돼 있었고, 같은 fadeUp 이 지속시간 6종·이징 3종으로 갈라져 있었다.
+   화면마다 모션이 다르면 같은 앱처럼 느껴지지 않는다.
+
+   지속시간은 100/300/500 규칙을 따른다.
+     피드백 (누름·색)        100-150ms
+     상태 변화 (펼침·전환)   180-300ms
+     레이아웃 (시트·아코디언) 300-500ms
+
+   제품 UI 라 모션은 상태를 알리는 역할만 한다. 장식용 모션은 넣지 않는다 —
+   매일 보는 화면에서 장식은 두 번째부터 방해가 된다.
+   ──────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  /* 아래에서 올라오는 패널 전용 — iOS 시트 곡선 */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --dur-press: 110ms;
+  --dur-state: 180ms;
+  --dur-reveal: 260ms;
+  --dur-layout: 320ms;
+}
+
+/* 키프레임 이름은 기존 코드가 쓰던 것을 그대로 둔다 —
+   각 파일에서 중복 정의만 지우면 인라인 usage 는 그대로 동작한다. */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* fill-mode 는 both 가 아니라 backwards 다. 이유가 있다.
+   both(=forwards 포함)는 애니메이션이 끝난 뒤에도 그 값을 계속 적용하고,
+   애니메이션 값은 일반 선언보다 우선한다. 그래서 등장이 끝난 버튼은
+   transform 이 영구히 애니메이션 소유가 되고 :active 의 누름 축소가 아예
+   먹지 않는다. backwards 는 지연 구간만 붙잡고 끝나면 손을 뗀다 —
+   아래 등장들은 모두 도착 상태가 요소의 평상시 값(opacity 1 / transform none)
+   과 같으므로 튀지 않는다. */
+.spin { animation: spin 0.8s linear infinite; }
+.fade-in { animation: fadeIn var(--dur-reveal) var(--ease-out-quart) backwards; }
+.rise { animation: fadeUp var(--dur-reveal) var(--ease-out-quint) backwards; }
+.sheet-panel { animation: sheetUp var(--dur-layout) var(--ease-sheet) backwards; }
+.sheet-scrim { animation: scrimIn 200ms ease-out backwards; }
+.skeleton { animation: pulse 1.4s ease-in-out infinite; }
+
+/* 리스트 등장. 부모에 .stagger, 각 항목에 style={{ "--i": i }}.
+   지연은 10번째까지만 준다 — 그 뒤로는 연출이 아니라 대기 시간이 된다. */
+.stagger > * {
+  animation: fadeUp var(--dur-reveal) var(--ease-out-quint) backwards;
+  animation-delay: calc(min(var(--i, 0), 9) * 40ms);
+}
+
+/* 펼치기. height 대신 grid 행을 애니메이션한다 — height 는 매 프레임
+   레이아웃을 다시 계산시키고, auto 값으로는 아예 전환되지 않는다. */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-layout) var(--ease-out-quint);
+}
+.collapsible[data-open="true"] { grid-template-rows: 1fr; }
+.collapsible > * { overflow: hidden; }
+
+/* 색·배경·테두리가 바뀌는 컨트롤(선택 칩, 좋아요 토글, 전송 버튼).
+   전에는 `transition: all` 이라 레이아웃 속성까지 애니메이션 대상이 됐다 —
+   바뀔 일이 없는 속성까지 매번 확인하게 만드는 비용이다. */
+.state-swap {
+  transition:
+    background var(--dur-state) var(--ease-out-quart),
+    border-color var(--dur-state) var(--ease-out-quart),
+    color var(--dur-state) var(--ease-out-quart),
+    transform var(--dur-press) var(--ease-out-quart);
+}
+
+/* 누름 피드백. 터치 기기에서 이게 없으면 화면이 죽은 것처럼 느껴진다.
+   인라인 style 에 transform 이 있는 요소는 인라인이 이기므로 그냥 빠진다 —
+   깨지는 게 아니라 적용되지 않을 뿐이다.
+
+   선택자를 일부러 약하게(0-1-1) 둔다. `button:not(:disabled):active` 로 쓰면
+   0-2-1 이 되어 `.tap-btn:active { transform: scale(0.91) }` 처럼 화면별로
+   더 세게 잡아둔 누름을 덮어쓴다. 기본값이 의도를 이기면 안 된다. */
+button,
+[role="button"] {
+  transition:
+    transform var(--dur-press) var(--ease-out-quart),
+    opacity var(--dur-press) linear;
+}
+
+button:active,
+[role="button"]:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* 비활성 버튼은 눌려도 반응하지 않는다 — 누르면 되는 것처럼 보이면 거짓말이다.
+   (opacity 는 대부분 인라인으로 지정돼 있어 인라인이 이긴다) */
+button:disabled:active {
+  transform: none;
+}
+
+/* 넓은 면적 자체가 탭 영역인 요소(소개 화면 본문 전체, 2px 진행 바)는
+   빼둔다. 화면의 3% 축소는 피드백이 아니라 흔들림으로 보이고, 2px 짜리
+   막대에서는 아무 의미가 없다. */
+button[data-press="off"]:active,
+[role="button"][data-press="off"]:active {
+  transform: none;
+}
+
+/* 접근성 — 선택이 아니다.
+   모션을 줄여달라고 설정한 사람에게는 전부 즉시 전환으로 바꾼다. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* 로딩 스피너만 예외다. 멈춰 세우면 "기다리는 중"이라는 정보 자체가
+     사라져서, 앱이 멈춘 것과 구분되지 않는다. 대신 느리게 돌린다. */
+  .spin {
+    animation-duration: 1.8s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

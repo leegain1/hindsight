@@ -98,7 +98,6 @@ function SearchContent() {
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input::placeholder { color: rgba(10,10,10,0.3); }
-        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       {/* Header */}
@@ -198,6 +197,7 @@ function SearchContent() {
 
           {/* Search button */}
           <button
+            className="state-swap"
             onClick={handleSearch}
             disabled={loading || !inputValue.trim()}
             style={{
@@ -214,17 +214,15 @@ function SearchContent() {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              transition: "all 0.15s",
             }}
           >
             {loading && (
-              <div style={{
+              <div className="spin" style={{
                 width: 10,
                 height: 10,
                 border: "1.5px solid rgba(245,242,236,0.4)",
                 borderTopColor: "#F5F2EC",
                 borderRadius: "50%",
-                animation: "spin 0.8s linear infinite",
               }} />
             )}
             {loading ? "..." : "검색"}
@@ -302,7 +300,7 @@ function SearchContent() {
             textAlign: "center",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 16, height: 16, border: "1.5px solid #D8D4CC", borderTopColor: "#0A0A0A", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+              <div className="spin" style={{ width: 16, height: 16, border: "1.5px solid #D8D4CC", borderTopColor: "#0A0A0A", borderRadius: "50%", }} />
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#8A8880", letterSpacing: "2px" }}>ANALYZING...</p>
             </div>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#D8D4CC", letterSpacing: "1px" }}>

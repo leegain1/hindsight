@@ -113,7 +113,6 @@ function LoginForm() {
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input::placeholder { color: rgba(10,10,10,0.3); }
-        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       {/* Header */}
@@ -274,7 +273,7 @@ function LoginForm() {
                 }}
               >
                 {loading && (
-                  <div style={{ width: 14, height: 14, border: "1.5px solid rgba(245,242,236,0.4)", borderTopColor: "#F5F2EC", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                  <div className="spin" style={{ width: 14, height: 14, border: "1.5px solid rgba(245,242,236,0.4)", borderTopColor: "#F5F2EC", borderRadius: "50%", }} />
                 )}
                 {mode === "login" ? "로그인" : "계정 만들기"}
               </button>

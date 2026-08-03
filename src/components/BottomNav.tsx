@@ -2,16 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
+/**
+ * 아이콘은 stroke/fill 에 currentColor 를 쓴다.
+ * 색을 JS 로 갈아끼우면 값이 즉시 튀어서 전환을 걸 수 없다 — 부모의 color 를
+ * transition 하면 활성/비활성이 부드럽게 넘어간다.
+ */
 const tabs = [
   {
     label: "HOME",
     href: "/",
-    icon: (active: boolean) => (
+    icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path
           d="M2 8L9 2L16 8V16H12V11H6V16H2V8Z"
-          stroke={active ? "#0A0A0A" : "#8A8880"}
+          stroke="currentColor"
           strokeWidth="1.2"
           strokeLinejoin="round"
           fill="none"
@@ -24,11 +30,11 @@ const tabs = [
     // 검색(AI 질의)은 홈의 플로팅 버튼으로 옮기고, 이 자리는 제품 비교가 쓴다
     label: "COMPARE",
     href: "/compare",
-    icon: (active: boolean) => (
+    icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <rect x="2" y="4" width="5.5" height="11" rx="1" stroke={active ? "#0A0A0A" : "#8A8880"} strokeWidth="1.2" />
-        <rect x="10.5" y="7" width="5.5" height="8" rx="1" stroke={active ? "#0A0A0A" : "#8A8880"} strokeWidth="1.2" />
-        <path d="M9.25 2v14" stroke={active ? "#0A0A0A" : "#8A8880"} strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1.5 2" />
+        <rect x="2" y="4" width="5.5" height="11" rx="1" stroke="currentColor" strokeWidth="1.2" />
+        <rect x="10.5" y="7" width="5.5" height="8" rx="1" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M9.25 2v14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1.5 2" />
       </svg>
     ),
     match: (p: string) => p.startsWith("/compare"),
@@ -36,12 +42,12 @@ const tabs = [
   {
     label: "SCAN",
     href: "/scan",
-    icon: (active: boolean) => (
+    icon: (
       <svg width="20" height="20" viewBox="0 0 72 72" fill="none">
-        <rect x="33" y="8" width="6" height="20" rx="1" fill={active ? "#F5F2EC" : "#8A8880"} />
-        <rect x="33" y="44" width="6" height="20" rx="1" fill={active ? "#F5F2EC" : "#8A8880"} />
-        <rect x="8" y="33" width="20" height="6" rx="1" fill={active ? "#F5F2EC" : "#8A8880"} />
-        <rect x="44" y="33" width="20" height="6" rx="1" fill={active ? "#F5F2EC" : "#8A8880"} />
+        <rect x="33" y="8" width="6" height="20" rx="1" fill="currentColor" />
+        <rect x="33" y="44" width="6" height="20" rx="1" fill="currentColor" />
+        <rect x="8" y="33" width="20" height="6" rx="1" fill="currentColor" />
+        <rect x="44" y="33" width="20" height="6" rx="1" fill="currentColor" />
       </svg>
     ),
     match: (p: string) => p.startsWith("/scan"),
@@ -50,11 +56,11 @@ const tabs = [
   {
     label: "COMMUNITY",
     href: "/community",
-    icon: (active: boolean) => (
+    icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path
           d="M2 3C2 2.44772 2.44772 2 3 2H15C15.5523 2 16 2.44772 16 3V11C16 11.5523 15.5523 12 15 12H10L6 16V12H3C2.44772 12 2 11.5523 2 11V3Z"
-          stroke={active ? "#0A0A0A" : "#8A8880"}
+          stroke="currentColor"
           strokeWidth="1.2"
           strokeLinejoin="round"
           fill="none"
@@ -66,18 +72,12 @@ const tabs = [
   {
     label: "PROFILE",
     href: "/profile",
-    icon: (active: boolean) => (
+    icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <circle
-          cx="9"
-          cy="6"
-          r="3"
-          stroke={active ? "#0A0A0A" : "#8A8880"}
-          strokeWidth="1.2"
-        />
+        <circle cx="9" cy="6" r="3" stroke="currentColor" strokeWidth="1.2" />
         <path
           d="M2 16C2 13.2386 5.13401 11 9 11C12.866 11 16 13.2386 16 16"
-          stroke={active ? "#0A0A0A" : "#8A8880"}
+          stroke="currentColor"
           strokeWidth="1.2"
           strokeLinecap="round"
         />
@@ -94,8 +94,41 @@ const tabs = [
  */
 const HIDE_ON = ["/welcome", "/onboarding", "/auth"];
 
+/** 활성 표시 바의 폭 */
+const INDICATOR_W = 22;
+
 export default function BottomNav() {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+
+  const activeIndex = tabs.findIndex((tab) => tab.match(pathname));
+
+  /**
+   * 활성 표시 바의 x 좌표. 탭 폭이 균등하지 않아(중앙 72px 고정) 계산식으로
+   * 못 낸다. translateX 안의 % 는 부모가 아니라 자기 폭 기준이라 CSS 만으로도
+   * 안 된다 — 그래서 실측해서 px 로 넣는다.
+   *
+   * 첫 측정 전에는 렌더하지 않는다. 0 에서 제자리로 미끄러져 들어오는 게
+   * 보이면 버그처럼 읽힌다.
+   */
+  const [indicatorX, setIndicatorX] = useState<number | null>(null);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav || activeIndex < 0) return;
+
+    const measure = () => {
+      const el = nav.querySelector<HTMLElement>(`[data-tab-index="${activeIndex}"]`);
+      if (!el) return;
+      setIndicatorX(el.offsetLeft + el.offsetWidth / 2 - INDICATOR_W / 2);
+    };
+
+    // observe() 직후 콜백이 한 번 불린다 — 초기 측정을 여기에 맡기면
+    // effect 본문에서 동기적으로 setState 하지 않아도 된다.
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [activeIndex]);
 
   if (HIDE_ON.some((p) => pathname.startsWith(p))) return null;
 
@@ -103,8 +136,29 @@ export default function BottomNav() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+        .nav-tab {
+          transition: color var(--dur-state) var(--ease-out-quart);
+        }
+        /* Link 는 button 이 아니라 전역 누름 규칙이 닿지 않는다 */
+        .nav-tab:active { opacity: 0.6; }
+
+        .nav-scan {
+          transition:
+            background var(--dur-state) var(--ease-out-quart),
+            color var(--dur-state) var(--ease-out-quart),
+            transform var(--dur-press) var(--ease-out-quart);
+        }
+        .nav-tab:active .nav-scan { transform: scale(0.92); }
+
+        .nav-indicator {
+          transition:
+            transform var(--dur-reveal) var(--ease-out-quint),
+            opacity var(--dur-state) linear;
+        }
       `}</style>
       <nav
+        ref={navRef}
         style={{
           position: "fixed",
           bottom: 0,
@@ -122,12 +176,14 @@ export default function BottomNav() {
           zIndex: 100,
         }}
       >
-        {tabs.map((tab) => {
-          const active = tab.match(pathname);
+        {tabs.map((tab, i) => {
+          const active = i === activeIndex;
           return (
             <Link
               key={tab.label}
               href={tab.href}
+              data-tab-index={i}
+              className="nav-tab"
               style={{
                 flex: tab.center ? "0 0 72px" : 1,
                 display: "flex",
@@ -137,10 +193,12 @@ export default function BottomNav() {
                 gap: 4,
                 textDecoration: "none",
                 position: "relative",
+                color: active ? "#0A0A0A" : "#8A8880",
               }}
             >
               {tab.center ? (
                 <div
+                  className="nav-scan"
                   style={{
                     width: 44,
                     height: 44,
@@ -152,20 +210,22 @@ export default function BottomNav() {
                     justifyContent: "center",
                     marginTop: -10,
                     boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                    // 검은 원 위에서는 아이콘이 크림색이어야 한다 —
+                    // 탭 색과 반대로 간다
+                    color: active ? "#F5F2EC" : "#8A8880",
                   }}
                 >
-                  {tab.icon(active)}
+                  {tab.icon}
                 </div>
               ) : (
-                tab.icon(active)
+                tab.icon
               )}
               <span
                 style={{
                   fontFamily: "'DM Mono', monospace",
                   fontSize: 7,
-                  color: active ? "#0A0A0A" : "#8A8880",
                   letterSpacing: "1.5px",
-                  marginTop: tab.center ? 0 : 0,
+                  color: "inherit",
                 }}
               >
                 {tab.label}
@@ -173,6 +233,28 @@ export default function BottomNav() {
             </Link>
           );
         })}
+
+        {/* 활성 탭 표시. 어느 탭에서 어느 탭으로 갔는지 위치로 보여준다.
+            SCAN 은 가운데 올라온 검은 원이 그 역할을 하므로, 바는 원 뒤로
+            들어가며 사라진다. */}
+        {indicatorX !== null && (
+          <div
+            className="nav-indicator"
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: INDICATOR_W,
+              height: 2,
+              borderRadius: 2,
+              background: "#0A0A0A",
+              transform: `translateX(${indicatorX}px)`,
+              opacity: tabs[activeIndex]?.center ? 0 : 1,
+              pointerEvents: "none",
+            }}
+          />
+        )}
       </nav>
     </>
   );

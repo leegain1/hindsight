@@ -228,25 +228,9 @@ export default function PhotoScanPage() {
     >
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: none; }
-        }
         @keyframes sweep {
           0%   { transform: translateY(-100%); }
           100% { transform: translateY(400%); }
-        }
-        @keyframes sheetUp {
-          from { transform: translateY(100%); }
-          to   { transform: none; }
-        }
-        @keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
-        .rise { animation: fadeUp 320ms ease-out both; }
-        .sheet-panel { animation: sheetUp 260ms cubic-bezier(0.32, 0.72, 0, 1) both; }
-        .sheet-scrim { animation: scrimIn 200ms ease-out both; }
-        button:active { opacity: 0.85; }
-        @media (prefers-reduced-motion: reduce) {
-          .rise, .sheet-panel, .sheet-scrim { animation: none; }
         }
       `}</style>
 
@@ -959,7 +943,7 @@ function Result({
             ? "저장했어요"
             : imageState === "error"
               ? "실패했어요. 다시 시도"
-              : "리포트 전체를 사진으로 저장"}
+              : "리포트를 사진으로 저장"}
       </button>
 
       <div style={{ display: "flex", gap: 10, marginTop: 10 }}>

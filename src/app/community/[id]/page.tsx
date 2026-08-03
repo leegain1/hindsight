@@ -237,8 +237,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   if (loading) {
     return (
       <main style={{ minHeight: "100dvh", background: "#F5F2EC", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <div style={{ width: 24, height: 24, border: "2px solid #D8D4CC", borderTopColor: "#0A0A0A", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <div className="spin" style={{ width: 24, height: 24, border: "2px solid #D8D4CC", borderTopColor: "#0A0A0A", borderRadius: "50%", }} />
       </main>
     );
   }
@@ -270,8 +269,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
       `}</style>
 
       {/* Header */}
@@ -317,7 +314,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </header>
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 20px 0", animation: "fadeIn 0.3s ease" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 20px 0", animation: "fadeUp var(--dur-reveal) var(--ease-out-quint) both" }}>
 
         {/* Author */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
@@ -408,6 +405,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         {/* Like button */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0", borderTop: "0.5px solid #D8D4CC", borderBottom: "0.5px solid #D8D4CC", marginBottom: 24 }}>
           <button
+            className="state-swap"
             onClick={handleLike}
             style={{
               display: "flex",
@@ -418,7 +416,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               border: `0.5px solid ${liked ? "#0A0A0A" : "#D8D4CC"}`,
               borderRadius: 20,
               cursor: "pointer",
-              transition: "all 0.15s",
             }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -457,7 +454,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 const cName = c.profiles?.name ?? c.profiles?.email?.split("@")[0] ?? "익명";
                 const cInit = getInitials(c.profiles?.name ?? null, c.profiles?.email ?? null);
                 return (
-                  <div key={c.id} style={{ display: "flex", gap: 10, animation: "fadeIn 0.2s ease" }}>
+                  <div key={c.id} style={{ display: "flex", gap: 10, animation: "fadeUp var(--dur-state) var(--ease-out-quint) both" }}>
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#EDEAE3", border: "0.5px solid #D8D4CC", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
                       <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880" }}>{cInit}</span>
                     </div>
@@ -510,6 +507,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           />
         </div>
         <button
+          className="state-swap"
           onClick={handleComment}
           disabled={!commentText.trim() || submittingComment}
           style={{
@@ -523,11 +521,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             justifyContent: "center",
             cursor: commentText.trim() ? "pointer" : "default",
             flexShrink: 0,
-            transition: "all 0.15s",
           }}
         >
           {submittingComment ? (
-            <div style={{ width: 12, height: 12, border: "1.5px solid rgba(245,242,236,0.4)", borderTopColor: "#F5F2EC", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <div className="spin" style={{ width: 12, height: 12, border: "1.5px solid rgba(245,242,236,0.4)", borderTopColor: "#F5F2EC", borderRadius: "50%", }} />
           ) : (
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 7H13M13 7L7 1M13 7L7 13" stroke={commentText.trim() ? "#F5F2EC" : "#8A8880"} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />

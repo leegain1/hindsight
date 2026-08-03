@@ -110,7 +110,6 @@ export default function CommunityWritePage() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         textarea { resize: none; }
         input::placeholder, textarea::placeholder { color: rgba(10,10,10,0.3); }
-        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       {/* Header */}
@@ -154,7 +153,7 @@ export default function CommunityWritePage() {
           }}
         >
           {submitting && (
-            <div style={{ width: 10, height: 10, border: "1.5px solid rgba(245,242,236,0.4)", borderTopColor: "#F5F2EC", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <div className="spin" style={{ width: 10, height: 10, border: "1.5px solid rgba(245,242,236,0.4)", borderTopColor: "#F5F2EC", borderRadius: "50%", }} />
           )}
           {factChecking ? "CHECKING..." : submitting ? "POSTING..." : "POST"}
         </button>
@@ -170,6 +169,7 @@ export default function CommunityWritePage() {
               const active = category === cat.value;
               return (
                 <button
+                  className="state-swap"
                   key={cat.value}
                   onClick={() => setCategory(cat.value)}
                   style={{
@@ -181,7 +181,6 @@ export default function CommunityWritePage() {
                     fontSize: 11,
                     fontWeight: 400,
                     cursor: "pointer",
-                    transition: "all 0.15s",
                   }}
                 >
                   {cat.label}
@@ -283,6 +282,7 @@ export default function CommunityWritePage() {
 
         {/* Fact check toggle */}
         <div
+          className="state-swap"
           style={{
             background: factCheck ? "#0A0A0A" : "#EDEAE3",
             border: `0.5px solid ${factCheck ? "#0A0A0A" : "#D8D4CC"}`,
@@ -292,7 +292,6 @@ export default function CommunityWritePage() {
             alignItems: "flex-start",
             gap: 12,
             cursor: "pointer",
-            transition: "all 0.2s",
           }}
           onClick={() => setFactCheck(!factCheck)}
         >
@@ -354,7 +353,7 @@ export default function CommunityWritePage() {
           }}
         >
           {submitting && (
-            <div style={{ width: 14, height: 14, border: "1.5px solid rgba(245,242,236,0.4)", borderTopColor: "#F5F2EC", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <div className="spin" style={{ width: 14, height: 14, border: "1.5px solid rgba(245,242,236,0.4)", borderTopColor: "#F5F2EC", borderRadius: "50%", }} />
           )}
           {factChecking ? "AI 검증 중..." : submitting ? "게시 중..." : "게시하기"}
         </button>

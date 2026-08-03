@@ -71,6 +71,7 @@ function ScoreRing({ score, color, label }: { score: number; color: string; labe
       <svg width="148" height="148" viewBox="0 0 148 148">
         <circle cx="74" cy="74" r={r} fill="none" stroke="rgba(245,242,236,0.08)" strokeWidth="2" />
         <circle
+          className="ring-arc"
           cx="74"
           cy="74"
           r={r}
@@ -80,7 +81,11 @@ function ScoreRing({ score, color, label }: { score: number; color: string; labe
           strokeDasharray={`${dash} ${circ - dash}`}
           strokeDashoffset={circ / 4}
           strokeLinecap="round"
-          style={{ transition: "stroke-dasharray 1s ease" }}
+          style={{
+            ["--ring-circ" as string]: circ,
+            ["--ring-dash" as string]: dash,
+            ["--ring-gap" as string]: circ - dash,
+          }}
         />
       </svg>
       <div style={{
@@ -91,7 +96,11 @@ function ScoreRing({ score, color, label }: { score: number; color: string; labe
         alignItems: "center",
         justifyContent: "center",
       }}>
-        <span style={{ fontSize: 44, fontWeight: 700, color, letterSpacing: "-2px", lineHeight: 1 }}>
+        {/* 링이 차오르기 시작한 뒤에 숫자가 올라온다.
+            숫자를 0 부터 세어 올리지는 않는다 — 이 화면은 서버에서 렌더되므로
+            그러면 HTML 에 "0" 이 실려 나가고, 느린 연결에서는 남의 제품 점수를
+            0 으로 보게 된다. 정보가 틀리는 것보다 연출이 덜한 게 낫다. */}
+        <span className="ring-value" style={{ fontSize: 44, fontWeight: 700, color, letterSpacing: "-2px", lineHeight: 1 }}>
           {score}
         </span>
         <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "rgba(245,242,236,0.4)", letterSpacing: "2px", marginTop: 4 }}>
@@ -923,13 +932,12 @@ export default function ProductCard({ product }: { product: ProductData }) {
 
           {loadingAnalysis && (
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{
+              <div className="spin" style={{
                 width: 14,
                 height: 14,
                 border: "1px solid #D8D4CC",
                 borderTopColor: "#0A0A0A",
                 borderRadius: "50%",
-                animation: "spin 0.8s linear infinite",
                 flexShrink: 0,
               }} />
               <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880", letterSpacing: "2px" }}>
@@ -1037,7 +1045,16 @@ export default function ProductCard({ product }: { product: ProductData }) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 점수 링이 0 에서 차오른다. transition 이 아니라 animation 이라야 한다 —
+           마운트 시점에 이미 최종값이라 transition 은 발동할 일이 없었고,
+           그래서 여태 링은 실제로 아무것도 움직이지 않았다. */
+        @keyframes ringFill {
+          from { stroke-dasharray: 0 var(--ring-circ); }
+          to   { stroke-dasharray: var(--ring-dash) var(--ring-gap); }
+        }
+        .ring-arc  { animation: ringFill 900ms var(--ease-out-quint) backwards; }
+        .ring-value { animation: fadeUp 400ms var(--ease-out-quint) 120ms backwards; }
       `}</style>
     </div>
   );

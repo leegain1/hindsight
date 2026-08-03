@@ -53,6 +53,7 @@ function PostRow({ post, index }: { post: Post; index: number }) {
     <div
       onClick={() => router.push(`/community/${post.id}`)}
       style={{
+        ["--i" as string]: index,
         paddingTop: index === 0 ? 0 : 24,
         paddingBottom: 24,
         borderBottom: "0.5px solid #D8D4CC",
@@ -175,7 +176,6 @@ export default function CommunityPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
       `}</style>
 
       <PageHeader
@@ -214,16 +214,16 @@ export default function CommunityPage() {
 
         {/* Feed */}
         {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} style={{
                 paddingTop: i === 0 ? 0 : 24,
                 paddingBottom: 24,
                 borderBottom: "0.5px solid #D8D4CC",
               }}>
-                <div style={{ height: 12, width: "30%", background: "#EDEAE3", borderRadius: 2, marginBottom: 12, animation: "pulse 1.4s ease-in-out infinite" }} />
-                <div style={{ height: 18, width: "85%", background: "#EDEAE3", borderRadius: 2, marginBottom: 8, animation: "pulse 1.4s ease-in-out infinite" }} />
-                <div style={{ height: 13, width: "60%", background: "#EDEAE3", borderRadius: 2, animation: "pulse 1.4s ease-in-out infinite" }} />
+                <div className="skeleton" style={{ height: 12, width: "30%", background: "#EDEAE3", borderRadius: 2, marginBottom: 12 }} />
+                <div className="skeleton" style={{ height: 18, width: "85%", background: "#EDEAE3", borderRadius: 2, marginBottom: 8 }} />
+                <div className="skeleton" style={{ height: 13, width: "60%", background: "#EDEAE3", borderRadius: 2 }} />
               </div>
             ))}
           </div>
@@ -253,7 +253,7 @@ export default function CommunityPage() {
             </button>
           </div>
         ) : (
-          <div>
+          <div className="stagger">
             {posts.map((post, i) => <PostRow key={post.id} post={post} index={i} />)}
           </div>
         )}

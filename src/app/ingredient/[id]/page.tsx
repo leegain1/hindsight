@@ -76,7 +76,10 @@ function RiskGauge({ score }: { score: number }) {
             background: `linear-gradient(90deg, #2A8A5C 0%, #C4780A 40%, #C05000 70%, #C44B4B 100%)`,
             borderRadius: 3,
             clipPath: `inset(0 ${100 - pct}% 0 0)`,
-            transition: "clip-path 1s cubic-bezier(0.22, 1, 0.36, 1)",
+            // transition 이 아니라 animation. 마운트 시점에 이미 최종 clip-path 라
+            // transition 은 발동할 일이 없었고, 그래서 바는 여태 움직이지 않았다.
+            ["--bar-clip" as string]: `inset(0 ${100 - pct}% 0 0)`,
+            animation: "barFill 900ms var(--ease-out-quint) backwards",
           }}
         />
       </div>
@@ -164,8 +167,11 @@ export default function IngredientPage({
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        @keyframes barFill {
+          from { clip-path: inset(0 100% 0 0); }
+          to   { clip-path: var(--bar-clip); }
+        }
       `}</style>
 
       {/* Header */}
@@ -204,13 +210,12 @@ export default function IngredientPage({
       {/* Loading */}
       {loading && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <div style={{
+          <div className="spin" style={{
             width: 24,
             height: 24,
             border: "2px solid #D8D4CC",
             borderTopColor: "#0A0A0A",
             borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
           }} />
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#8A8880", letterSpacing: "1.5px" }}>
             ANALYZING...
@@ -236,7 +241,7 @@ export default function IngredientPage({
 
       {/* Content */}
       {data && !loading && (
-        <div style={{ animation: "fadeIn 0.4s ease" }}>
+        <div style={{ animation: "fadeUp var(--dur-reveal) var(--ease-out-quint) both" }}>
           {/* Hero */}
           <div style={{ background: "#0A0A0A", padding: "28px 24px 24px" }}>
             <div style={{ maxWidth: 480, margin: "0 auto" }}>
