@@ -43,6 +43,17 @@ export default function ProfilePage() {
   const supabase = createClient();
 
   const [profile, setProfile] = useState<Profile | null>(null);
+  // 온보딩 설문이 로컬에 남긴 결과 (Supabase 미설정 시 대체 소스)
+  const [localSensitivity, setLocalSensitivity] = useState<ProfileType | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("hindsight_sensitivity");
+      if (raw) setLocalSensitivity((JSON.parse(raw) as { type: ProfileType }).type);
+    } catch {
+      /* 값이 깨졌으면 없는 것으로 본다 */
+    }
+  }, []);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
   const [localScans, setLocalScans] = useState<RecentScan[]>([]);
   const [myPosts, setMyPosts] = useState<MyPost[]>([]);
@@ -93,9 +104,9 @@ export default function ProfilePage() {
     router.replace("/");
   };
 
-  const profileMeta = profile?.sensitivity_type
-    ? PROFILE_META[profile.sensitivity_type]
-    : null;
+  // 서버 값이 우선. Supabase 키가 없으면 온보딩이 로컬에 남긴 결과로 대체한다
+  const sensitivityType = profile?.sensitivity_type ?? localSensitivity;
+  const profileMeta = sensitivityType ? PROFILE_META[sensitivityType] : null;
 
   if (loading) {
     return (
@@ -362,8 +373,12 @@ export default function ProfilePage() {
 
             {/* Sensitivity profile row */}
             <div style={{ paddingBottom: 20, borderBottom: "0.5px solid #D8D4CC", marginBottom: 0 }}>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "2.5px", marginBottom: 14 }}>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "2.5px", marginBottom: 6 }}>
                 SENSITIVITY PROFILE
+              </p>
+              {/* 처음에 건너뛴 사용자가 여기서 설문을 하거나 답을 고칠 수 있어야 한다 */}
+              <p style={{ fontSize: 12, color: "#8A8880", lineHeight: 1.6, marginBottom: 12 }}>
+                개인 맞춤 분석 — 알레르기·복용 약·건강 목표 12문항. 언제든 다시 답할 수 있어요.
               </p>
               <button
                 onClick={() => router.push("/onboarding")}
@@ -383,7 +398,7 @@ export default function ProfilePage() {
                     {profileMeta?.label ?? "미설정"}
                   </p>
                   <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#8A8880", letterSpacing: "1px" }}>
-                    {profileMeta ? "재측정하기" : "측정 시작"}
+                    {profileMeta ? "답변 수정하기" : "설문 시작하기"}
                   </p>
                 </div>
                 <span style={{ fontSize: 16, color: "#8A8880", fontWeight: 300 }}>→</span>
