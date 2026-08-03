@@ -18,6 +18,7 @@ import {
   type RankedProduct,
 } from "@/lib/productData";
 import { EMPTY_HEALTH_PROFILE, type HealthProfile } from "@/lib/profiling";
+import PageHeader from "@/components/PageHeader";
 
 const INK = "#0A0A0A";
 const CANVAS = "#F5F2EC";
@@ -92,29 +93,13 @@ export default function ComparePage() {
         @media (prefers-reduced-motion: reduce) { .rise { animation: none; } }
       `}</style>
 
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "20px 24px",
-          borderBottom: `0.5px solid ${HAIRLINE}`,
-        }}
-      >
-        <span style={{ fontFamily: SANS, fontSize: 15, fontWeight: 300, letterSpacing: "3px", color: INK }}>
-          HINDSIGHT<span style={{ opacity: 0.25 }}>+</span>
-        </span>
-        <span style={{ fontFamily: MONO, fontSize: 9, color: MUTED, letterSpacing: "1.5px" }}>COMPARE</span>
-      </header>
+      <PageHeader
+        eyebrow="COMPARE"
+        title="비교"
+        subtitle={`최대 ${MAX_PICK}개까지 고르면 회원님 조건에 맞춰 다시 판정합니다`}
+      />
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "24px 24px 32px" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 300, color: INK, lineHeight: 1.3, letterSpacing: "-0.7px", marginBottom: 8 }}>
-          내 기준으로 나란히 비교
-        </h1>
-        <p style={{ fontSize: 13, color: INK, opacity: 0.6, lineHeight: 1.7, marginBottom: 18 }}>
-          최대 {MAX_PICK}개까지 고르면 회원님 조건에 맞춰 다시 판정합니다.
-        </p>
-
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 24px 32px" }}>
         {/* 직접 비교 — 카테고리를 훑지 않고 아는 제품 두 개를 바로 올린다 */}
         <button
           type="button"

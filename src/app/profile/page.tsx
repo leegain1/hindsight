@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { PROFILE_META, EMPTY_HEALTH_PROFILE, type ProfileType, type HealthProfile } from "@/lib/profiling";
 import { getScoreColor } from "@/lib/scoring";
 import { MOCK_SCANS } from "@/lib/mockScans";
+import PageHeader from "@/components/PageHeader";
 
 interface SavedAnalysis {
   id: string;
@@ -142,6 +143,7 @@ export default function ProfilePage() {
   // 서버 값이 우선. Supabase 키가 없으면 온보딩이 로컬에 남긴 결과로 대체한다
   const sensitivityType = profile?.sensitivity_type ?? localSensitivity;
   const profileMeta = sensitivityType ? PROFILE_META[sensitivityType] : null;
+  const displayName = profile?.name ?? profile?.email?.split("@")[0] ?? "게스트";
 
   if (loading) {
     return (
@@ -164,55 +166,15 @@ export default function ProfilePage() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
       `}</style>
 
-      {/* Header */}
-      <header style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "22px 28px",
-        borderBottom: "0.5px solid #D8D4CC",
-      }}>
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#0A0A0A", letterSpacing: "3px" }}>
-          HINDSIGHT+
-        </span>
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880", letterSpacing: "2px" }}>PROFILE</span>
-      </header>
-
-      {/* Profile hero */}
-      <div style={{ padding: "40px 28px 36px", borderBottom: "0.5px solid #D8D4CC", maxWidth: 480, margin: "0 auto", width: "100%" }}>
-        <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#8A8880", letterSpacing: "3px", marginBottom: 16 }}>
-          {profileMeta ? profileMeta.type.toUpperCase() : "MEMBER"}
-        </p>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-1.2px", lineHeight: 1.1, marginBottom: 8 }}>
-          {profile?.name ?? profile?.email?.split("@")[0] ?? "사용자"}
-        </h1>
-        <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880", letterSpacing: "1px", marginBottom: 16 }}>
-          {profile?.email}
-        </p>
-
-        {profileMeta ? (
-          <p style={{ fontSize: 13, fontWeight: 300, color: "#8A8880", letterSpacing: "-0.1px" }}>
-            {profileMeta.label} — {profileMeta.tip}
-          </p>
-        ) : (
-          <button
-            onClick={() => router.push("/onboarding")}
-            style={{
-              background: "none",
-              border: "0.5px solid #D8D4CC",
-              borderRadius: 2,
-              padding: "8px 16px",
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 9,
-              color: "#8A8880",
-              letterSpacing: "1.5px",
-              cursor: "pointer",
-            }}
-          >
-            SETUP PROFILE →
-          </button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="PROFILE"
+        title="사용자"
+        subtitle={
+          profileMeta
+            ? `${displayName} · ${profileMeta.label}`
+            : `${displayName} · 개인 맞춤 분석 미설정`
+        }
+      />
 
       {/* Tabs */}
       <div style={{

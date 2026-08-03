@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 
 import { CATEGORIES as CAT_LIST } from "@/lib/categories";
 import { sortMockPosts } from "@/lib/mockCommunity";
+import PageHeader from "@/components/PageHeader";
 
 const CATEGORY_META: Record<string, { label: string; color: string }> = {
   ...Object.fromEntries(CAT_LIST.map((c) => [c.slug, { label: c.nameKo, color: c.color }])),
@@ -178,40 +178,18 @@ export default function CommunityPage() {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
       `}</style>
 
-      {/* Header */}
-      <header style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "22px 28px",
-        borderBottom: "0.5px solid #D8D4CC",
-        position: "sticky",
-        top: 0,
-        background: "#F5F2EC",
-        zIndex: 20,
-      }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#0A0A0A", letterSpacing: "3px" }}>
-            HINDSIGHT+
-          </span>
-        </Link>
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880", letterSpacing: "2px" }}>COMMUNITY</span>
-      </header>
-
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 28px" }}>
-
-        {/* Title + sort */}
-        <div style={{ paddingTop: 40, paddingBottom: 32, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-1.2px", lineHeight: 1.1 }}>
-            커뮤니티
-          </h1>
-          <div style={{ display: "flex", gap: 0 }}>
+      <PageHeader
+        eyebrow="COMMUNITY"
+        title="커뮤니티"
+        subtitle="성분에 대해 묻고, 근거로 답합니다"
+        right={
+          <div style={{ display: "flex" }}>
             {(["latest", "popular"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setSort(s)}
                 style={{
-                  padding: "6px 12px",
+                  padding: "6px 10px",
                   background: "none",
                   border: "none",
                   borderBottom: sort === s ? "1px solid #0A0A0A" : "1px solid transparent",
@@ -220,14 +198,19 @@ export default function CommunityPage() {
                   letterSpacing: "1.5px",
                   color: sort === s ? "#0A0A0A" : "#8A8880",
                   cursor: "pointer",
-                  transition: "all 0.15s",
+                  minHeight: 0,
+                  minWidth: 0,
                 }}
               >
                 {s === "latest" ? "LATEST" : "POPULAR"}
               </button>
             ))}
           </div>
-        </div>
+        }
+      />
+
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 28px" }}>
+
 
         {/* Feed */}
         {loading ? (
