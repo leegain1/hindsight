@@ -77,6 +77,19 @@ export default function Home() {
       .catch(() => setFactsLoading(false));
   }, []);
 
+  // 첫 진입이면 시작 화면으로 — 브랜드 → 로그인 → 앱 소개 → 개인 맞춤 설문.
+  // 한 번 거치면 localStorage 에 표시가 남아 다시 뜨지 않는다.
+  // (다시 보려면 /welcome 으로 직접 들어가면 된다)
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("hindsight_welcome_seen")) {
+        router.replace("/welcome");
+      }
+    } catch {
+      /* localStorage 차단 환경 — 그냥 홈을 보여준다 */
+    }
+  }, [router]);
+
   // Load recent scans from localStorage
   useEffect(() => {
     try {
@@ -238,6 +251,45 @@ export default function Home() {
                 바코드 스캔해서 제품 분석
               </span>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 7H12M12 7L7 2M12 7L7 12" stroke="#0A0A0A" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </Link>
+
+          {/* 사진 분석 CTA — 바코드가 없는 제품용. Yuka 대비 핵심 차별점이라 홈에 둔다.
+              ?open=1 로 들어가면 사진 화면이 뜨자마자 카메라/앨범 선택 시트가 열린다
+              (홈에서 두 번만 눌러 촬영까지 도달). */}
+          <Link href="/scan/photo?open=1" style={{ textDecoration: "none" }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              background: "#F5F2EC",
+              borderRadius: 12,
+              padding: "14px 16px 14px 20px",
+              marginTop: 10,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M2 6.5A1.5 1.5 0 013.5 5h2L7 3h6l1.5 2h2A1.5 1.5 0 0118 6.5v9A1.5 1.5 0 0116.5 17h-13A1.5 1.5 0 012 15.5v-9z" stroke="#0A0A0A" strokeWidth="1.2" strokeLinejoin="round" />
+                <circle cx="10" cy="11" r="3.2" stroke="#0A0A0A" strokeWidth="1.2" />
+              </svg>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#0A0A0A", letterSpacing: "0.3px" }}>
+                바코드 없이 제품 분석
+              </span>
+              {/* 신규 기능 표시 — 두 CTA 가 둘 다 밝은 버튼이라 이걸로 구분한다 */}
+              <span style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 8,
+                letterSpacing: "1px",
+                color: "#F5F2EC",
+                background: "#0A0A0A",
+                borderRadius: 4,
+                padding: "3px 6px",
+                flexShrink: 0,
+              }}>
+                NEW
+              </span>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
                 <path d="M2 7H12M12 7L7 2M12 7L7 12" stroke="#0A0A0A" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
@@ -522,6 +574,40 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* AI 챗봇 — 탭바에서 내려온 검색(AI 질의)의 새 자리.
+          탭바(64px) 바로 위 우측 하단에 떠 있는다. */}
+      <Link
+        href="/search"
+        aria-label="AI 에게 물어보기"
+        style={{
+          position: "fixed",
+          right: 20,
+          bottom: 80,
+          zIndex: 90,
+          width: 54,
+          height: 54,
+          borderRadius: "50%",
+          background: "#0A0A0A",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textDecoration: "none",
+          boxShadow: "0 4px 16px rgba(10,10,10,0.22)",
+        }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M4 5.5A1.5 1.5 0 015.5 4h13A1.5 1.5 0 0120 5.5v9a1.5 1.5 0 01-1.5 1.5H9l-4 3.5V16H5.5A1.5 1.5 0 014 14.5v-9z"
+            stroke="#F5F2EC"
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+          />
+          <circle cx="8.7" cy="10" r="1" fill="#F5F2EC" />
+          <circle cx="12" cy="10" r="1" fill="#F5F2EC" />
+          <circle cx="15.3" cy="10" r="1" fill="#F5F2EC" />
+        </svg>
+      </Link>
     </main>
   );
 }
