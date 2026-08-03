@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { PROFILE_META, EMPTY_HEALTH_PROFILE, type ProfileType, type HealthProfile } from "@/lib/profiling";
 import { getScoreColor } from "@/lib/scoring";
+import { MOCK_SCANS } from "@/lib/mockScans";
+
+interface SavedAnalysis {
+  id: string;
+  productName: string;
+  brand: string;
+  score: number;
+  label: string;
+  color: string;
+  riskCount: number;
+}
 
 interface Profile {
   id: string;
@@ -53,6 +64,18 @@ export default function ProfilePage() {
       if (raw) setLocalSensitivity((JSON.parse(raw) as { type: ProfileType }).type);
       const h = localStorage.getItem("hindsight_health_profile");
       if (h) setHealth({ ...EMPTY_HEALTH_PROFILE, ...JSON.parse(h) });
+    } catch {
+      /* 값이 깨졌으면 없는 것으로 본다 */
+    }
+  }, []);
+
+  // 사진 분석에서 "저장" 누른 것들
+  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("hindsight_saved_analyses");
+      if (raw) setSavedAnalyses(JSON.parse(raw) as SavedAnalysis[]);
     } catch {
       /* 값이 깨졌으면 없는 것으로 본다 */
     }
@@ -235,88 +258,90 @@ export default function ProfilePage() {
         {/* SCAN HISTORY TAB */}
         {activeTab === "history" && (
           <div style={{ paddingTop: 32 }}>
-            {scanHistory.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {scanHistory.map((s, i) => (
+            {/* 저장한 분석 — 사용자가 직접 남긴 것이라 최근 스캔보다 위에 둔다 */}
+            {savedAnalyses.length > 0 && (
+              <section style={{ marginBottom: 34 }}>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "2.5px", marginBottom: 14 }}>
+                  SAVED · 저장함 {savedAnalyses.length}
+                </p>
+                {savedAnalyses.map((s) => (
                   <div
                     key={s.id}
-                    onClick={() => router.push(`/scan/result/${s.barcode}`)}
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between",
-                      paddingTop: i === 0 ? 0 : 16,
-                      paddingBottom: 16,
-                      borderBottom: "0.5px solid #D8D4CC",
-                      cursor: "pointer",
+                      gap: 12,
+                      padding: "13px 14px",
+                      marginBottom: 8,
+                      background: "#FFFFFF",
+                      border: "0.5px solid #D8D4CC",
+                      borderRadius: 12,
                     }}
                   >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 14, fontWeight: 400, color: "#0A0A0A", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.2px" }}>
-                        {s.product_name || "알 수 없는 제품"}
-                      </p>
-                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#8A8880", letterSpacing: "0.5px" }}>
-                        {s.barcode} · {new Date(s.scanned_at).toLocaleDateString("ko-KR")}
-                      </p>
-                    </div>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 16, fontWeight: 500, color: getScoreColor(s.score), marginLeft: 16, flexShrink: 0, letterSpacing: "-0.5px" }}>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: s.color, letterSpacing: "-0.5px", minWidth: 30, flexShrink: 0 }}>
                       {s.score}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#0A0A0A", letterSpacing: "-0.2px" }}>
+                        {s.productName}
+                      </span>
+                      <span style={{ display: "block", fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880", letterSpacing: "0.5px", marginTop: 2 }}>
+                        {s.brand} · 주의 성분 {s.riskCount}
+                      </span>
+                    </span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: s.color, background: `${s.color}14`, borderRadius: 999, padding: "3px 8px", flexShrink: 0 }}>
+                      {s.label}
                     </span>
                   </div>
                 ))}
-              </div>
-            ) : localScans.length > 0 ? (
-              <div>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "2px", marginBottom: 20 }}>
-                  LOCAL · 로그인 전 기록
-                </p>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  {localScans.map((s, i) => (
-                    <div
-                      key={s.barcode}
-                      onClick={() => router.push(`/scan/result/${s.barcode}`)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        paddingTop: i === 0 ? 0 : 16,
-                        paddingBottom: 16,
-                        borderBottom: "0.5px solid #D8D4CC",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <p style={{ fontSize: 14, fontWeight: 400, color: "#0A0A0A", letterSpacing: "-0.2px" }}>{s.name}</p>
-                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 16, fontWeight: 500, color: s.color, letterSpacing: "-0.5px" }}>{s.score}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ paddingTop: 48, textAlign: "center" }}>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880", letterSpacing: "2px", marginBottom: 12 }}>
-                  NO SCANS YET
-                </p>
-                <p style={{ fontSize: 14, fontWeight: 300, color: "#8A8880", marginBottom: 32, letterSpacing: "-0.2px" }}>
-                  아직 스캔한 제품이 없어요.
-                </p>
-                <button
-                  onClick={() => router.push("/scan")}
-                  style={{
-                    padding: "13px 28px",
-                    background: "#0A0A0A",
-                    color: "#F5F2EC",
-                    border: "none",
-                    borderRadius: 2,
-                    fontFamily: "'DM Mono', monospace",
-                    fontSize: 9,
-                    letterSpacing: "2px",
-                    cursor: "pointer",
-                  }}
-                >
-                  SCAN NOW
-                </button>
-              </div>
+              </section>
             )}
+
+            {/* 최근 스캔 — 서버 이력 > 로컬 기록 > 목 데이터 순으로 채운다 */}
+            <section>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "2.5px", marginBottom: 14 }}>
+                RECENT · 최근 스캔
+              </p>
+
+              {scanHistory.length > 0 ? (
+                scanHistory.map((s) => (
+                  <ScanRow
+                    key={s.id}
+                    name={s.product_name || "알 수 없는 제품"}
+                    sub={`${s.barcode} · ${new Date(s.scanned_at).toLocaleDateString("ko-KR")}`}
+                    score={s.score}
+                    color={getScoreColor(s.score)}
+                    onClick={() => router.push(`/scan/result/${s.barcode}`)}
+                  />
+                ))
+              ) : localScans.length > 0 ? (
+                localScans.map((s) => (
+                  <ScanRow
+                    key={s.barcode}
+                    name={s.name}
+                    sub={s.barcode}
+                    score={s.score}
+                    color={s.color}
+                    onClick={() => router.push(`/scan/result/${s.barcode}`)}
+                  />
+                ))
+              ) : (
+                MOCK_SCANS.map((s) => (
+                  <ScanRow
+                    key={s.barcode}
+                    name={s.name}
+                    sub={`${s.brand} · ${s.via === "photo" ? "사진 분석" : "바코드"}`}
+                    score={s.score}
+                    color={s.color}
+                    onClick={
+                      s.via === "photo"
+                        ? () => router.push("/scan/photo")
+                        : () => router.push(`/scan/result/${s.barcode}`)
+                    }
+                  />
+                ))
+              )}
+            </section>
           </div>
         )}
 
@@ -542,5 +567,53 @@ export default function ProfilePage() {
         )}
       </div>
     </main>
+  );
+}
+
+/** 스캔 이력 한 줄 — 서버·로컬·목 세 소스가 같은 모양으로 보여야 한다 */
+function ScanRow({
+  name,
+  sub,
+  score,
+  color,
+  onClick,
+}: {
+  name: string;
+  sub: string;
+  score: number;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        padding: "14px 0",
+        background: "none",
+        border: "none",
+        borderBottom: "0.5px solid #D8D4CC",
+        cursor: "pointer",
+        textAlign: "left",
+        touchAction: "manipulation",
+      }}
+    >
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 14, fontWeight: 400, color: "#0A0A0A", letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {name}
+        </span>
+        <span style={{ display: "block", fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#8A8880", letterSpacing: "0.5px", marginTop: 4 }}>
+          {sub}
+        </span>
+      </span>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 16, fontWeight: 500, color, flexShrink: 0, letterSpacing: "-0.5px" }}>
+        {score}
+      </span>
+    </button>
   );
 }
