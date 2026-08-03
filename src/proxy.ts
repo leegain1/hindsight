@@ -11,11 +11,23 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Supabase 미설정 시 인증 게이트를 통과시킨다.
+  //
+  // 예전에는 env 를 `!` 로 단언하고 곧장 createServerClient 를 불러서, 키가 없으면
+  // /profile · /onboarding 이 500 으로 죽었다. 키를 아직 못 받은 상태에서도 화면을
+  // 확인할 수 있어야 하므로 로그인 강제를 건너뛴다.
+  // 키가 들어오면 아래 분기가 자동으로 꺼지고 원래 인증 흐름이 복구된다.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
