@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Phase = "idle" | "scanning" | "processing" | "error";
 
@@ -578,6 +579,30 @@ export default function ScanPage() {
             >
               🖼️ 갤러리에서 바코드 사진 선택
             </button>
+
+            {/* 바코드가 없는 제품 → 제품 사진 분석. 홈과 동일하게 선택 시트를 바로 연다 */}
+            <Link
+              href="/scan/photo?open=1"
+              style={{
+                width: "100%",
+                padding: "14px 24px",
+                background: "#0A0A0A",
+                color: "#F5F2EC",
+                border: "none",
+                borderRadius: 12,
+                fontSize: 14,
+                fontWeight: 500,
+                fontFamily: "'Space Grotesk', -apple-system, sans-serif",
+                cursor: "pointer",
+                touchAction: "manipulation",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              바코드 없이 제품 분석
+            </Link>
 
             {/* Divider */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", margin: "2px 0" }}>
