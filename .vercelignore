@@ -1,0 +1,32 @@
+# CLI 배포(`vercel --prod`)는 깃 브랜치가 아니라 이 폴더를 그대로 업로드한다.
+# .vercelignore 가 없으면 무엇이 올라가는지가 CLI 버전에 따라 달라지므로
+# 명시해둔다.
+
+# 키 파일은 올리지 않는다.
+# 환경변수는 Vercel 프로젝트 설정(`vercel env add`)에서 온다 — 파일로 올리면
+# 값이 빌드 산출물에 박히고, 누가 무엇을 바꿨는지 추적할 수도 없다.
+.env
+.env.*
+!.env.*.example
+
+# 빌드 산출물·의존성 — Vercel 이 서버에서 다시 만든다
+node_modules
+.next
+out
+build
+
+# 로컬 도구·기록
+.git
+.vercel
+.claude
+.gstack
+.agents
+.idea
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
+
+# 문서·SQL 은 배포에 필요 없다 (SQL 은 Supabase 콘솔에서 직접 돌린다)
+docs
+sql
+supabase
