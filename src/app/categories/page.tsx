@@ -19,7 +19,7 @@ export default function CategoriesPage() {
       `}</style>
 
       {/* Header */}
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "0.5px solid #D8D4CC" }}>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(20px + env(safe-area-inset-top)) 24px 20px", borderBottom: "0.5px solid #D8D4CC" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <svg width="22" height="22" viewBox="0 0 72 72" fill="none">
             <rect x="33" y="8" width="6" height="20" rx="1" fill="#0A0A0A" />

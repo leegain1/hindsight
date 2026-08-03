@@ -118,7 +118,7 @@ export default function CommunityWritePage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "20px 24px",
+        padding: "calc(20px + env(safe-area-inset-top)) 24px 20px",
         borderBottom: "0.5px solid #D8D4CC",
         position: "sticky",
         top: 0,

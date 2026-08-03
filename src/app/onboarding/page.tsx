@@ -128,6 +128,7 @@ export default function OnboardingPage() {
         fontFamily: SANS,
         display: "flex",
         flexDirection: "column",
+        paddingTop: "env(safe-area-inset-top)",
       }}
     >
       <style>{`

@@ -110,7 +110,11 @@ export default function BottomNav() {
           bottom: 0,
           left: 0,
           right: 0,
-          height: 64,
+          // 아이폰 홈 인디케이터에 탭이 깔리지 않도록 아래 여백을 더한다.
+          // box-sizing 이 border-box 라 고정 height 에 패딩을 얹으면 탭이 눌리므로
+          // height 대신 최소 높이로 잡는다.
+          minHeight: 64,
+          paddingBottom: "env(safe-area-inset-bottom)",
           background: "#F5F2EC",
           borderTop: "0.5px solid #D8D4CC",
           display: "flex",

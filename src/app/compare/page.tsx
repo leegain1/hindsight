@@ -95,7 +95,7 @@ export default function ComparePage() {
 
       <PageHeader
         eyebrow="COMPARE"
-        title="내 기준으로 나란히 비교"
+        title="내 기준으로 비교하기"
         subtitle={`최대 ${MAX_PICK}개까지 고르면 회원님 조건에 맞춰 다시 판정합니다`}
       />
 
@@ -508,7 +508,7 @@ function DirectCompare({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "20px 24px",
+          padding: "calc(20px + env(safe-area-inset-top)) 24px 20px",
           borderBottom: `0.5px solid ${HAIRLINE}`,
           flexShrink: 0,
         }}

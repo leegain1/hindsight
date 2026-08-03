@@ -297,7 +297,7 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
       `}</style>
 
       {/* Header */}
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "0.5px solid #D8D4CC" }}>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(20px + env(safe-area-inset-top)) 24px 20px", borderBottom: "0.5px solid #D8D4CC" }}>
         <button onClick={() => router.back()} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: "0 8px", minHeight: 44 }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M10 2L4 8L10 14" stroke="#0A0A0A" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />

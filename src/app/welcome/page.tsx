@@ -122,6 +122,7 @@ export default function WelcomePage() {
         fontFamily: SANS,
         display: "flex",
         flexDirection: "column",
+        paddingTop: "env(safe-area-inset-top)",
         transition: "background 520ms ease",
         overflow: "hidden",
       }}
