@@ -95,7 +95,7 @@ export default function ComparePage() {
 
       <PageHeader
         eyebrow="COMPARE"
-        title="비교"
+        title="내 기준으로 나란히 비교"
         subtitle={`최대 ${MAX_PICK}개까지 고르면 회원님 조건에 맞춰 다시 판정합니다`}
       />
 

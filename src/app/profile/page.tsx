@@ -168,7 +168,7 @@ export default function ProfilePage() {
 
       <PageHeader
         eyebrow="PROFILE"
-        title="사용자"
+        title="내 프로필"
         subtitle={
           profileMeta
             ? `${displayName} · ${profileMeta.label}`
