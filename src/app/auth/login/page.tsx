@@ -5,10 +5,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { Suspense } from "react";
 
+/**
+ * 콜백에서 넘어온 실패 사유를 사람 말로 바꾼다.
+ * 전에는 콜백이 `?error=auth_failed` 를 붙여 보내는데 이 화면이 읽지 않아서,
+ * 구글 로그인이 실패하면 아무 설명 없이 로그인 화면으로 되돌아왔다.
+ */
+const AUTH_ERRORS: Record<string, string> = {
+  denied: "구글 로그인을 취소했어요. 다시 시도하거나 이메일로 로그인해주세요.",
+  no_code: "로그인 정보가 전달되지 않았어요. 다시 시도해주세요.",
+  exchange_failed:
+    "로그인을 마무리하지 못했어요. 잠시 후 다시 시도해주세요. (계속되면 관리자에게 문의해주세요)",
+  not_configured: "로그인 서버가 아직 연결되지 않았어요. 관리자에게 문의해주세요.",
+};
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/profile";
+  const authError = searchParams.get("error");
 
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
@@ -248,8 +262,10 @@ function LoginForm() {
                 />
               </div>
 
-              {error && (
-                <p style={{ fontSize: 12, color: "#C44B4B", fontWeight: 300 }}>{error}</p>
+              {(error || (authError && AUTH_ERRORS[authError])) && (
+                <p style={{ fontSize: 12, color: "#C44B4B", fontWeight: 300, lineHeight: 1.6 }}>
+                  {error || AUTH_ERRORS[authError as string]}
+                </p>
               )}
 
               <button

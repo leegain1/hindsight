@@ -16,6 +16,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { WELCOME_SEEN_KEY, allowAnonBrowsing } from "@/lib/session";
 
 const INK = "#0A0A0A";
 const CANVAS = "#F5F2EC";
@@ -24,9 +25,6 @@ const MUTED = "#8A8880";
 
 const SANS = "'Space Grotesk', -apple-system, sans-serif";
 const MONO = "'DM Mono', monospace";
-
-/** 이 흐름을 이미 봤는지 — 홈에서 매번 다시 띄우지 않기 위해 */
-export const WELCOME_SEEN_KEY = "hindsight_welcome_seen";
 
 type Phase = "brand" | "login" | "intro" | "cta";
 
@@ -76,6 +74,10 @@ function WelcomeFlow() {
       } catch {
         /* 저장 실패해도 진행은 막지 않는다 */
       }
+      // 로그인하지 않고 여기까지 온 경우가 있다. 홈은 로그인 없으면
+      // /welcome 으로 되돌리므로, 이 표시가 없으면 서로 밀어내며 돈다.
+      // 탭 단위로만 남으므로 새로 열면 다시 처음부터다.
+      allowAnonBrowsing();
       router.push(next);
     },
     [router],
