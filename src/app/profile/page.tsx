@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
-import { PROFILE_META, type ProfileType } from "@/lib/profiling";
+import { PROFILE_META, EMPTY_HEALTH_PROFILE, type ProfileType, type HealthProfile } from "@/lib/profiling";
 import { getScoreColor } from "@/lib/scoring";
 
 interface Profile {
@@ -45,15 +45,27 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   // 온보딩 설문이 로컬에 남긴 결과 (Supabase 미설정 시 대체 소스)
   const [localSensitivity, setLocalSensitivity] = useState<ProfileType | null>(null);
+  const [health, setHealth] = useState<HealthProfile>(EMPTY_HEALTH_PROFILE);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem("hindsight_sensitivity");
       if (raw) setLocalSensitivity((JSON.parse(raw) as { type: ProfileType }).type);
+      const h = localStorage.getItem("hindsight_health_profile");
+      if (h) setHealth({ ...EMPTY_HEALTH_PROFILE, ...JSON.parse(h) });
     } catch {
       /* 값이 깨졌으면 없는 것으로 본다 */
     }
   }, []);
+
+  // 설문에서 실제로 채운 항목만 보여준다
+  const healthGroups = [
+    { label: "알레르기", items: health.allergies },
+    { label: "질환", items: health.conditions },
+    { label: "복용 중인 약", items: health.medications },
+    { label: "건강 목표", items: health.goals },
+    { label: "피하고 싶은 성분", items: health.avoid },
+  ].filter((g) => g.items.length > 0);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
   const [localScans, setLocalScans] = useState<RecentScan[]>([]);
   const [myPosts, setMyPosts] = useState<MyPost[]>([]);
@@ -376,32 +388,93 @@ export default function ProfilePage() {
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 7, color: "#8A8880", letterSpacing: "2.5px", marginBottom: 6 }}>
                 SENSITIVITY PROFILE
               </p>
-              {/* 처음에 건너뛴 사용자가 여기서 설문을 하거나 답을 고칠 수 있어야 한다 */}
-              <p style={{ fontSize: 12, color: "#8A8880", lineHeight: 1.6, marginBottom: 12 }}>
-                개인 맞춤 분석 — 알레르기·복용 약·건강 목표 12문항. 언제든 다시 답할 수 있어요.
+              {/* 처음에 건너뛴 사용자가 여기서 설문을 하거나 답을 고칠 수 있어야 한다.
+                  답한 내용이 안 보이면 무엇을 고칠지 모르므로 항목별로 전부 노출한다. */}
+              <p style={{ fontSize: 12, color: "#8A8880", lineHeight: 1.6, marginBottom: 14 }}>
+                개인 맞춤 분석 — 여기 적힌 조건으로 제품을 다시 판정합니다.
               </p>
+
+              {healthGroups.length > 0 ? (
+                <div
+                  style={{
+                    background: "#FFFFFF",
+                    border: "0.5px solid #D8D4CC",
+                    borderRadius: 12,
+                    padding: "16px 14px",
+                    marginBottom: 10,
+                  }}
+                >
+                  {profileMeta && (
+                    <p style={{ fontSize: 15, fontWeight: 600, color: "#0A0A0A", letterSpacing: "-0.2px", marginBottom: 14 }}>
+                      {profileMeta.label}
+                    </p>
+                  )}
+                  {healthGroups.map((g) => (
+                    <div key={g.label} style={{ marginBottom: 12 }}>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#8A8880", letterSpacing: "1.5px", marginBottom: 6 }}>
+                        {g.label}
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {g.items.map((it) => (
+                          <span
+                            key={it}
+                            style={{
+                              fontSize: 13,
+                              color: "#0A0A0A",
+                              background: "#EDEAE3",
+                              border: "0.5px solid #D8D4CC",
+                              borderRadius: 999,
+                              padding: "6px 11px",
+                            }}
+                          >
+                            {it}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: "#EDEAE3",
+                    border: "0.5px solid #D8D4CC",
+                    borderRadius: 12,
+                    padding: "16px 14px",
+                    marginBottom: 10,
+                  }}
+                >
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "#0A0A0A", marginBottom: 4 }}>
+                    아직 설문을 안 하셨어요
+                  </p>
+                  <p style={{ fontSize: 12, color: "#8A8880", lineHeight: 1.6 }}>
+                    알레르기·질환을 입력하면 같은 제품도 회원님 기준으로 다시 판정합니다. 1분이면 끝나요.
+                  </p>
+                </div>
+              )}
+
               <button
                 onClick={() => router.push("/onboarding")}
                 style={{
                   width: "100%",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
-                  background: "none",
-                  border: "none",
+                  justifyContent: "center",
+                  gap: 8,
+                  background: healthGroups.length > 0 ? "transparent" : "#0A0A0A",
+                  border: healthGroups.length > 0 ? "0.5px solid #D8D4CC" : "none",
+                  borderRadius: 12,
                   cursor: "pointer",
-                  padding: "12px 0",
+                  padding: "14px 16px",
+                  fontFamily: "'Space Grotesk', -apple-system, sans-serif",
+                  fontSize: 14,
+                  fontWeight: healthGroups.length > 0 ? 400 : 600,
+                  color: healthGroups.length > 0 ? "#0A0A0A" : "#F5F2EC",
+                  touchAction: "manipulation",
                 }}
               >
-                <div style={{ textAlign: "left" }}>
-                  <p style={{ fontSize: 15, fontWeight: 400, color: "#0A0A0A", letterSpacing: "-0.2px", marginBottom: 3 }}>
-                    {profileMeta?.label ?? "미설정"}
-                  </p>
-                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#8A8880", letterSpacing: "1px" }}>
-                    {profileMeta ? "답변 수정하기" : "설문 시작하기"}
-                  </p>
-                </div>
-                <span style={{ fontSize: 16, color: "#8A8880", fontWeight: 300 }}>→</span>
+                {healthGroups.length > 0 ? "답변 수정하기" : "설문 시작하기"}
+                <span aria-hidden="true" style={{ opacity: 0.5 }}>→</span>
               </button>
             </div>
 
