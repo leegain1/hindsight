@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import CameraCapture from "@/components/CameraCapture";
 import {
   analyzePhoto,
   RetakeError,
@@ -99,6 +100,7 @@ export default function PhotoScanPage() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const albumInputRef = useRef<HTMLInputElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [preview, setPreview] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -145,7 +147,13 @@ export default function PhotoScanPage() {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await runAnalysis(file);
+    // 같은 파일을 다시 골라도 change 가 발생하도록 초기화
+    e.target.value = "";
+  };
 
+  /** 카메라 촬영과 파일 선택이 같은 흐름을 타도록 File 단위로 묶는다 */
+  const runAnalysis = async (file: File) => {
     setPreview(await fileToDataUrl(file));
     setElapsed(0);
     setResult(null);
@@ -167,9 +175,6 @@ export default function PhotoScanPage() {
       setPreview(null);
       setPhase("idle");
     }
-
-    // 같은 파일을 다시 골라도 change 가 발생하도록 초기화
-    e.target.value = "";
   };
 
   const reset = () => {
@@ -306,12 +311,29 @@ export default function PhotoScanPage() {
         )}
       </div>
 
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={(file) => {
+            setCameraOpen(false);
+            void runAnalysis(file);
+          }}
+          onClose={() => setCameraOpen(false)}
+          // 카메라를 못 쓰는 환경(http 접속·권한 거부·웹캠 없음)에서는
+          // 기존 파일 입력으로 넘긴다. capture 속성이 붙은 쪽이라 폰에서는
+          // OS 카메라가 뜰 수도 있다.
+          onFallback={() => {
+            setCameraOpen(false);
+            cameraInputRef.current?.click();
+          }}
+        />
+      )}
+
       {sheetOpen && (
         <SourceSheet
           onClose={() => setSheetOpen(false)}
           onCamera={() => {
             setSheetOpen(false);
-            cameraInputRef.current?.click();
+            setCameraOpen(true);
           }}
           onAlbum={() => {
             setSheetOpen(false);
