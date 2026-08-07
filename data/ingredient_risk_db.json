@@ -18,7 +18,7 @@
     "합성착색료":     { "category": "착색료",     "penalty": 6, "aliases": ["적색40호", "황색4호", "황색5호", "타르색소", "적색색소"] },
     "안식향산나트륨": { "category": "보존료",     "penalty": 6, "aliases": ["sodium benzoate", "벤조산나트륨"] },
     "아질산나트륨":   { "category": "보존료/발색제","penalty": 8, "aliases": ["sodium nitrite", "아질산염"], "sensitive_group": ["영유아"] },
-    "합성향료":       { "category": "향료",       "penalty": 3, "aliases": ["synthetic flavor", "인공향료"] },
+    "합성향료":       { "category": "향료",       "penalty": 3, "aliases": ["synthetic flavor", "인공향료", "합성착향료", "착향료", "합성착향", "혼합제제향료"] },
     "L-글루탐산나트륨":{ "category": "향미증진제", "penalty": 3, "aliases": ["msg", "MSG", "글루탐산나트륨"] },
     "카페인":         { "category": "기타",       "penalty": 4, "aliases": ["caffeine"], "sensitive_group": ["임산부", "영유아"] }
   },
