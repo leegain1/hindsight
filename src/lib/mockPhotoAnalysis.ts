@@ -61,7 +61,9 @@ export const VERDICT_COLOR: Record<VerdictLabel, string> = {
 export type IngredientSource =
   | "식약처 공개데이터"
   | "제조사 표기"
-  | "사용자 제보 DB";
+  | "사용자 제보 DB"
+  /** 바코드 조회가 아니라 사진에서 직접 판독한 경우 — Yuka 대비 차별점 */
+  | "사진 판독";
 
 export interface DetectedProduct {
   productName: string;

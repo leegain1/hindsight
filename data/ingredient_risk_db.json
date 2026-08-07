@@ -1,0 +1,32 @@
+{
+  "_meta": {
+    "설명": "HINDSIGHT+ 성분 위험도 샘플 DB. 영양성분 감점 구간 + 주의성분 감점 + 개인화 가중치.",
+    "출처_기준": "식약처 식품첨가물 정보 / 식품영양성분 DB 기준으로 확장 예정 (샘플)",
+    "점수공식": "최종점수 = 100 - 영양성분감점 - 주의성분감점 (0~100 clamp)"
+  },
+
+  "nutrient_rules": {
+    "sugar_g":   [ {"max": 5,   "penalty": 0}, {"max": 15, "penalty": 5},  {"max": 25, "penalty": 12}, {"max": null, "penalty": 20} ],
+    "sodium_mg": [ {"max": 140, "penalty": 0}, {"max": 400,"penalty": 5},  {"max": 800,"penalty": 12}, {"max": null, "penalty": 20} ],
+    "sat_fat_g": [ {"max": 1.5, "penalty": 0}, {"max": 5,  "penalty": 5},  {"max": null,"penalty": 12} ]
+  },
+
+  "caution_ingredients": {
+    "아스파탐":       { "category": "인공감미료", "penalty": 6, "aliases": ["aspartame"], "sensitive_group": ["페닐케톤뇨증"] },
+    "아세설팜칼륨":   { "category": "인공감미료", "penalty": 5, "aliases": ["acesulfame k", "아세설팜k", "아세설팜"] },
+    "수크랄로스":     { "category": "인공감미료", "penalty": 5, "aliases": ["sucralose"] },
+    "합성착색료":     { "category": "착색료",     "penalty": 6, "aliases": ["적색40호", "황색4호", "황색5호", "타르색소", "적색색소"] },
+    "안식향산나트륨": { "category": "보존료",     "penalty": 6, "aliases": ["sodium benzoate", "벤조산나트륨"] },
+    "아질산나트륨":   { "category": "보존료/발색제","penalty": 8, "aliases": ["sodium nitrite", "아질산염"], "sensitive_group": ["영유아"] },
+    "합성향료":       { "category": "향료",       "penalty": 3, "aliases": ["synthetic flavor", "인공향료"] },
+    "L-글루탐산나트륨":{ "category": "향미증진제", "penalty": 3, "aliases": ["msg", "MSG", "글루탐산나트륨"] },
+    "카페인":         { "category": "기타",       "penalty": 4, "aliases": ["caffeine"], "sensitive_group": ["임산부", "영유아"] }
+  },
+
+  "personalization_weights": {
+    "당관리":   { "sugar_g": 1.5 },
+    "혈압관리": { "sodium_mg": 1.5 },
+    "체중관리": { "sat_fat_g": 1.3, "sugar_g": 1.2 },
+    "임신":     { "카페인": 2.0, "아질산나트륨": 1.5 }
+  }
+}
