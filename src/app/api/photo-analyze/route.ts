@@ -116,7 +116,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const score = analyze(extraction.ingredients, extraction.nutrition, profile);
+    const score = analyze(
+      extraction.ingredients,
+      extraction.nutrition,
+      profile,
+      extraction.readability,
+    );
     const shown = score.personalScore;
     const label = verdictOf(shown);
 

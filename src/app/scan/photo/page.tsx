@@ -11,6 +11,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import CameraCapture from "@/components/CameraCapture";
+import ImageCropper from "@/components/ImageCropper";
+import { inspectImage } from "@/lib/imageQuality";
 import {
   analyzePhoto,
   RetakeError,
@@ -104,6 +106,10 @@ export default function PhotoScanPage() {
   // 표시사항에서 제품명을 못 읽었을 때 사용자가 직접 적는 이름.
   // 저장함에 "이름을 읽지 못한 제품" 이 쌓이면 이력이 쓸모없어진다.
   const [nameInput, setNameInput] = useState("");
+  // 촬영·선택 직후 크롭 화면으로 넘길 원본. 크롭을 거쳐야 분석으로 간다.
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  // 차단까지는 아닌 품질 경고 (반사·어두움·약한 흔들림)
+  const [qualityHint, setQualityHint] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [preview, setPreview] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -150,18 +156,36 @@ export default function PhotoScanPage() {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await runAnalysis(file);
+    // 바로 분석하지 않는다 — 원재료명 영역만 남기면 같은 업로드 크기로
+    // 글자 해상도가 몇 배 올라간다. 판독 정확도의 가장 큰 손잡이다.
+    setRetake(null);
+    setPendingFile(file);
     // 같은 파일을 다시 골라도 change 가 발생하도록 초기화
     e.target.value = "";
   };
 
-  /** 카메라 촬영과 파일 선택이 같은 흐름을 타도록 File 단위로 묶는다 */
+  /**
+   * 크롭을 마친 사진을 분석으로 보낸다.
+   * 보내기 전에 브라우저에서 품질을 한 번 본다 — Vision 의 readability 와
+   * 이중 체크다. 여기서 걸러지면 API 비용과 대기 시간을 아낀다.
+   */
   const runAnalysis = async (file: File) => {
+    const quality = await inspectImage(file);
+    if (quality.block) {
+      setRetake(quality.message ?? "사진을 다시 찍어주세요.");
+      setPreview(null);
+      setPhase("idle");
+      return;
+    }
+    // 차단은 아니지만 품질이 아쉬운 경우 — 분석은 진행하고 안내만 남긴다
+    setQualityHint(quality.message);
+
     setPreview(await fileToDataUrl(file));
     setElapsed(0);
     setResult(null);
     setRetake(null);
     setNameInput("");
+    setQualityHint(null);
     setSaved(false);
     setPhase("analyzing");
 
@@ -186,6 +210,7 @@ export default function PhotoScanPage() {
     setResult(null);
     setRetake(null);
     setNameInput("");
+    setQualityHint(null);
     setElapsed(0);
     setSaved(false);
     setSavedList(readSaved());
@@ -305,6 +330,7 @@ export default function PhotoScanPage() {
         {phase === "done" && result && (
           <Result
             result={result}
+            qualityHint={qualityHint}
             nameInput={nameInput}
             onNameInput={setNameInput}
             preview={preview}
@@ -319,11 +345,23 @@ export default function PhotoScanPage() {
         )}
       </div>
 
+      {pendingFile && (
+        <ImageCropper
+          file={pendingFile}
+          onDone={(cropped) => {
+            setPendingFile(null);
+            void runAnalysis(cropped);
+          }}
+          onCancel={() => setPendingFile(null)}
+        />
+      )}
+
       {cameraOpen && (
         <CameraCapture
           onCapture={(file) => {
             setCameraOpen(false);
-            void runAnalysis(file);
+            setRetake(null);
+            setPendingFile(file);
           }}
           onClose={() => setCameraOpen(false)}
           // 카메라를 못 쓰는 환경(http 접속·권한 거부·웹캠 없음)에서는
@@ -765,6 +803,7 @@ function Analyzing({ preview, elapsed }: { preview: string | null; elapsed: numb
 
 function Result({
   result,
+  qualityHint,
   nameInput,
   onNameInput,
   preview,
@@ -777,6 +816,7 @@ function Result({
   onReset,
 }: {
   result: AnalyzedPhoto;
+  qualityHint: string | null;
   nameInput: string;
   onNameInput: (v: string) => void;
   preview: string | null;
@@ -839,6 +879,36 @@ function Result({
             분석 서버에 연결하지 못해 준비된 예시 결과를 보여주고 있습니다.
           </span>
         </div>
+      )}
+
+      {/* 신뢰도 — 판독 품질과 DB 커버리지가 함께 매긴다.
+          점수만 크게 보여주고 신뢰도를 감추면 근거 없는 확신이 된다. */}
+      {result.scoreDetail && result.scoreDetail.confidence !== "high" && (
+        <div
+          style={{
+            background: result.scoreDetail.confidence === "low" ? "#FBEFEF" : "#FAF4E8",
+            border: `0.5px solid ${result.scoreDetail.confidence === "low" ? "#E3C4C4" : "#E0D3B8"}`,
+            borderRadius: 10,
+            padding: "11px 14px",
+            marginBottom: 12,
+          }}
+        >
+          <p style={{ fontFamily: MONO, fontSize: 9, color: result.scoreDetail.confidence === "low" ? "#C44B4B" : "#8A6D2F", letterSpacing: "1.5px", marginBottom: 5 }}>
+            신뢰도 {result.scoreDetail.confidence === "low" ? "낮음" : "보통"}
+          </p>
+          {result.scoreDetail.confidenceReasons.map((r) => (
+            <p key={r} style={{ fontSize: 11, color: "#6A5A3F", lineHeight: 1.6 }}>
+              · {r}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* 촬영 품질 경고 — 차단은 아니지만 결과에 영향을 줄 수 있다 */}
+      {qualityHint && (
+        <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.6, marginBottom: 12 }}>
+          {qualityHint}
+        </p>
       )}
 
       {/* 영양성분 일부를 못 읽었으면 점수가 후하게 나온다 — 숨기지 않는다 */}
@@ -905,6 +975,49 @@ function Result({
       <p style={{ fontSize: 14, color: INK, lineHeight: 1.6, opacity: 0.8, marginBottom: 24 }}>
         {verdict.body}
       </p>
+
+      {/* 미확인 성분 — 감점이 없다고 안전한 게 아니다.
+          우리 DB 는 주의성분 샘플이라 대부분의 성분이 여기로 떨어진다.
+          모르는 것을 모른다고 적지 않으면 점수가 실제보다 후해 보인다. */}
+      {result.scoreDetail && result.scoreDetail.unassessed.length > 0 && (
+        <div
+          style={{
+            background: CARD,
+            border: `0.5px solid ${HAIRLINE}`,
+            borderRadius: 12,
+            padding: "14px 16px",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: INK }}>미확인 성분</p>
+            <p style={{ fontFamily: MONO, fontSize: 9, color: MUTED }}>
+              {result.scoreDetail.assessed.length}/{result.scoreDetail.assessed.length + result.scoreDetail.unassessed.length} 확인
+            </p>
+          </div>
+          <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.6, marginBottom: 10 }}>
+            아래 성분은 저희 DB에 없어 위험도를 평가하지 못했습니다. 감점되지 않았을 뿐,
+            안전하다는 뜻은 아닙니다.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {result.scoreDetail.unassessed.map((n) => (
+              <span
+                key={n}
+                style={{
+                  fontSize: 11,
+                  color: "#5A5A56",
+                  background: CANVAS,
+                  border: `0.5px solid ${HAIRLINE}`,
+                  borderRadius: 999,
+                  padding: "4px 10px",
+                }}
+              >
+                {n}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {preview && (
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>

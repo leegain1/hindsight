@@ -88,6 +88,29 @@ export interface AnalysisScore {
   skippedNutrients: string[];
   /** 사용자가 "피하고 싶다"고 고른 성분과 일치한 항목 (점수에는 영향 없음) */
   avoidHits: string[];
+
+  /**
+   * DB 에 등재돼 있어 실제로 평가한 성분 표기.
+   * 감점된 것뿐 아니라 "DB 에 있고 확인했다"는 사실이 신뢰도의 분자다.
+   */
+  assessed: string[];
+  /**
+   * DB 에 없어 평가하지 못한 성분 표기 = 미확인 성분.
+   *
+   * 이걸 그냥 버리면 "감점이 없다"가 "안전하다"로 읽힌다. 우리 DB 는 주의성분
+   * 9종짜리 샘플이라 실제 제품 성분 대부분이 여기로 떨어진다. 모르는 것을
+   * 모른다고 말하지 않으면 점수가 실제보다 후해 보인다.
+   */
+  unassessed: string[];
+  /** 평가한 성분 / 전체 성분 (0~1) */
+  coverage: number;
+  /**
+   * 이 점수를 얼마나 믿을 수 있는지.
+   * 판독 품질과 DB 커버리지가 함께 떨어뜨린다.
+   */
+  confidence: "high" | "medium" | "low";
+  /** 신뢰도가 내려간 이유 — 화면에 그대로 보여준다 */
+  confidenceReasons: string[];
 }
 
 // ── 매칭 ───────────────────────────────────────────────────────────────────
@@ -255,6 +278,8 @@ export function analyze(
   ingredients: ExtractedIngredient[],
   nutrition: ExtractedNutrition,
   profile: HealthProfile | null = null,
+  /** Vision 이 매긴 판독 품질 — 신뢰도 계산에 함께 쓴다 */
+  readability: "good" | "partial" | "poor" = "good",
 ): AnalysisScore {
   const appliedGoals = toPersonalizationKeys(profile);
 
@@ -273,6 +298,26 @@ export function analyze(
   const nutrientPenalty = sum(nutrientDeductions);
   const ingredientPenalty = sum(ingredientDeductions);
 
+  const { assessed, unassessed } = crossCheck(ingredients);
+  const coverage = ingredients.length ? assessed.length / ingredients.length : 0;
+
+  // 신뢰도는 한 단계씩 깎아 내린다. 원인이 겹치면 그만큼 더 내려간다.
+  const reasons: string[] = [];
+  let level = 2; // 2 high · 1 medium · 0 low
+  if (readability === "partial") {
+    level--;
+    reasons.push("사진 일부를 읽지 못했습니다");
+  }
+  if (skipped.length > 0) {
+    level--;
+    reasons.push(`${skipped.join("·")}을 읽지 못해 계산에서 뺐습니다`);
+  }
+  if (unassessed.length > 0 && coverage < 0.35) {
+    level--;
+    reasons.push(`성분 ${unassessed.length}건이 DB에 없어 평가하지 못했습니다`);
+  }
+  const confidence = level >= 2 ? "high" : level === 1 ? "medium" : "low";
+
   return {
     baseScore,
     personalScore: clamp(100 - nutrientPenalty - ingredientPenalty),
@@ -282,7 +327,36 @@ export function analyze(
     appliedGoals,
     skippedNutrients: skipped,
     avoidHits: findAvoidHits(ingredients, ingredientDeductions, profile),
+    assessed,
+    unassessed,
+    coverage,
+    confidence,
+    confidenceReasons: reasons,
   };
+}
+
+/**
+ * 식약처 기준 DB 교차검증.
+ *
+ * 추출된 성분 하나하나를 DB 표준명·aliases 와 부분 매칭해, 평가한 것과 평가하지
+ * 못한 것으로 가른다. 감점 여부와는 다른 축이다 — 감점 0 점인 성분도 "DB 에서
+ * 확인했다"면 평가한 것이다(지금 DB 는 주의성분만 담고 있어 실질적으로는
+ * 매칭 = 감점이지만, 안전 성분이 추가돼도 이 구분은 그대로 성립한다).
+ */
+function crossCheck(ingredients: ExtractedIngredient[]): {
+  assessed: string[];
+  unassessed: string[];
+} {
+  const assessed: string[] = [];
+  const unassessed: string[] = [];
+
+  for (const ing of ingredients) {
+    const hit = Object.entries(CAUTION).some(([standard, entry]) =>
+      [standard, ...(entry.aliases ?? [])].some((t) => matches(ing.name, t)),
+    );
+    (hit ? assessed : unassessed).push(ing.name);
+  }
+  return { assessed, unassessed };
 }
 
 function sum(ds: Deduction[]): number {
