@@ -219,7 +219,7 @@ export default function CameraCapture({
                 lineHeight: 1.5,
               }}
             >
-              원재료명·영양정보가 이 안에 꽉 차도록 가까이서 찍어주세요
+              표시사항 전체(제품명·원재료명·영양정보)가 이 안에 들어오게 찍어주세요
             </p>
           </>
         )}

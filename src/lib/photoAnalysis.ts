@@ -31,6 +31,8 @@ export interface AnalyzedPhoto extends PhotoAnalysisResult {
   scoreDetail?: AnalysisScore;
   /** 영양성분 일부를 못 읽어 계산에서 뺐는지 */
   partialRead?: boolean;
+  /** 표시사항에서 제품명을 못 읽었는지 — 화면이 직접 입력을 받는다 */
+  nameUnread?: boolean;
 }
 
 /** 다시 촬영이 필요할 때 던진다. 화면이 이걸 잡아 안내 문구를 띄운다. */

@@ -147,6 +147,8 @@ export async function POST(request: NextRequest) {
       isDemo: boolean;
       scoreDetail: typeof score;
       partialRead: boolean;
+      /** 표시사항에서 제품명을 못 읽은 경우 — 화면이 직접 입력을 받는다 */
+      nameUnread: boolean;
     } = {
       detected: {
         productName: extraction.product_name ?? "이름을 읽지 못한 제품",
@@ -193,6 +195,7 @@ export async function POST(request: NextRequest) {
       isDemo: false,
       scoreDetail: score,
       partialRead: partial,
+      nameUnread: !extraction.product_name,
     };
 
     return NextResponse.json({ ok: true, result });

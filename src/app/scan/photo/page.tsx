@@ -101,6 +101,9 @@ export default function PhotoScanPage() {
   const albumInputRef = useRef<HTMLInputElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  // 표시사항에서 제품명을 못 읽었을 때 사용자가 직접 적는 이름.
+  // 저장함에 "이름을 읽지 못한 제품" 이 쌓이면 이력이 쓸모없어진다.
+  const [nameInput, setNameInput] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [preview, setPreview] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -158,6 +161,7 @@ export default function PhotoScanPage() {
     setElapsed(0);
     setResult(null);
     setRetake(null);
+    setNameInput("");
     setSaved(false);
     setPhase("analyzing");
 
@@ -181,6 +185,7 @@ export default function PhotoScanPage() {
     setPreview(null);
     setResult(null);
     setRetake(null);
+    setNameInput("");
     setElapsed(0);
     setSaved(false);
     setSavedList(readSaved());
@@ -206,7 +211,8 @@ export default function PhotoScanPage() {
         cacheBust: true,
       });
       const a = document.createElement("a");
-      const name = result?.detected.productName ?? "report";
+      const name =
+        (nameInput.trim() || result?.detected.productName) ?? "report";
       a.download = `hindsight-${name}.png`;
       a.href = dataUrl;
       a.click();
@@ -223,9 +229,9 @@ export default function PhotoScanPage() {
   const save = () => {
     if (!result || saved) return;
     const entry: SavedAnalysis = {
-      id: `${result.detected.brand}-${result.detected.productName}-${Date.now()}`,
+      id: `${result.detected.brand}-${nameInput.trim() || result.detected.productName}-${Date.now()}`,
       savedAt: Date.now(),
-      productName: result.detected.productName,
+      productName: nameInput.trim() || result.detected.productName,
       brand: result.detected.brand,
       score: result.verdict.score,
       label: result.verdict.label,
@@ -299,6 +305,8 @@ export default function PhotoScanPage() {
         {phase === "done" && result && (
           <Result
             result={result}
+            nameInput={nameInput}
+            onNameInput={setNameInput}
             preview={preview}
             saved={saved}
             onSave={save}
@@ -757,6 +765,8 @@ function Analyzing({ preview, elapsed }: { preview: string | null; elapsed: numb
 
 function Result({
   result,
+  nameInput,
+  onNameInput,
   preview,
   saved,
   onSave,
@@ -767,6 +777,8 @@ function Result({
   onReset,
 }: {
   result: AnalyzedPhoto;
+  nameInput: string;
+  onNameInput: (v: string) => void;
   preview: string | null;
   saved: boolean;
   onSave: () => void;
@@ -852,9 +864,33 @@ function Result({
           <p style={{ fontFamily: MONO, fontSize: 9, color: MUTED, letterSpacing: "1.5px", marginBottom: 6 }}>
             {detected.brand}
           </p>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: INK, letterSpacing: "-0.5px", lineHeight: 1.2 }}>
-            {detected.productName}
-          </h1>
+          {result.nameUnread ? (
+            // 표시사항에 제품명이 안 잡혔다. 추측해서 채우면 틀린 이름이 이력에
+            // 남으므로, 사용자가 직접 적게 한다.
+            <input
+              value={nameInput}
+              onChange={(e) => onNameInput(e.target.value)}
+              placeholder="제품명을 적어주세요"
+              aria-label="제품명"
+              style={{
+                width: "100%",
+                fontSize: 20,
+                fontWeight: 600,
+                color: INK,
+                letterSpacing: "-0.5px",
+                background: "transparent",
+                border: "none",
+                borderBottom: `1px dashed ${HAIRLINE}`,
+                outline: "none",
+                padding: "2px 0 4px",
+                fontFamily: SANS,
+              }}
+            />
+          ) : (
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: INK, letterSpacing: "-0.5px", lineHeight: 1.2 }}>
+              {detected.productName}
+            </h1>
+          )}
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <p style={{ fontSize: 44, fontWeight: 700, color: verdict.color, letterSpacing: "-1.5px", lineHeight: 1 }}>
