@@ -12,14 +12,15 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   analyzePhoto,
+  RetakeError,
   PIPELINE_STAGES,
   TOTAL_PIPELINE_MS,
-  type PhotoAnalysisResult,
+  type AnalyzedPhoto,
   type RiskItem,
   type ReviewSummary,
   type TrustBadge,
   type UserReview,
-} from "@/lib/mockPhotoAnalysis";
+} from "@/lib/photoAnalysis";
 
 const INK = "#0A0A0A";
 const CANVAS = "#F5F2EC";
@@ -101,7 +102,9 @@ export default function PhotoScanPage() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [preview, setPreview] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [result, setResult] = useState<PhotoAnalysisResult | null>(null);
+  const [result, setResult] = useState<AnalyzedPhoto | null>(null);
+  // 판독 실패로 다시 찍어야 할 때의 안내 문구. 목 폴백과 구분해서 다룬다.
+  const [retake, setRetake] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [savedList, setSavedList] = useState<SavedAnalysis[]>([]);
   // 리포트 전체를 PNG 로 뽑을 때 캡처 대상
@@ -146,12 +149,24 @@ export default function PhotoScanPage() {
     setPreview(await fileToDataUrl(file));
     setElapsed(0);
     setResult(null);
+    setRetake(null);
     setSaved(false);
     setPhase("analyzing");
 
-    const analysis = await analyzePhoto(file);
-    setResult(analysis);
-    setPhase("done");
+    try {
+      const analysis = await analyzePhoto(file);
+      setResult(analysis);
+      setPhase("done");
+    } catch (err) {
+      // 판독 불가는 결과가 아니다 — 목으로 덮지 않고 다시 찍게 한다
+      setRetake(
+        err instanceof RetakeError
+          ? err.message
+          : "분석에 실패했어요. 잠시 후 다시 시도해주세요.",
+      );
+      setPreview(null);
+      setPhase("idle");
+    }
 
     // 같은 파일을 다시 골라도 change 가 발생하도록 초기화
     e.target.value = "";
@@ -160,6 +175,7 @@ export default function PhotoScanPage() {
   const reset = () => {
     setPreview(null);
     setResult(null);
+    setRetake(null);
     setElapsed(0);
     setSaved(false);
     setSavedList(readSaved());
@@ -254,6 +270,23 @@ export default function PhotoScanPage() {
       />
 
       <div style={{ flex: 1, maxWidth: 480, width: "100%", margin: "0 auto", padding: "24px 24px 32px" }}>
+        {phase === "idle" && retake && (
+          <div
+            className="rise"
+            style={{
+              margin: "0 20px 4px",
+              background: "#FBEFEF",
+              border: "0.5px solid #E3C4C4",
+              borderRadius: 12,
+              padding: "14px 16px",
+            }}
+          >
+            <p style={{ fontFamily: MONO, fontSize: 9, color: "#C44B4B", letterSpacing: "1.5px", marginBottom: 6 }}>
+              RETAKE
+            </p>
+            <p style={{ fontSize: 13, color: INK, lineHeight: 1.6 }}>{retake}</p>
+          </div>
+        )}
         {phase === "idle" && <Intro onPick={() => setSheetOpen(true)} savedList={savedList} />}
 
         {phase === "analyzing" && <Analyzing preview={preview} elapsed={elapsed} />}
@@ -711,7 +744,7 @@ function Result({
   onRetry,
   onReset,
 }: {
-  result: PhotoAnalysisResult;
+  result: AnalyzedPhoto;
   preview: string | null;
   saved: boolean;
   onSave: () => void;
@@ -745,6 +778,48 @@ function Result({
           </span>
           <span style={{ fontSize: 11, color: CANVAS, opacity: 0.75, lineHeight: 1.5 }}>
             바코드 DB 에 없는 제품입니다. 사진으로 분석했습니다.
+          </span>
+        </div>
+      )}
+
+      {/* 목 폴백으로 떨어진 결과는 실제 분석과 구분해서 표시한다.
+          발표장에 인터넷이 없어 폴백이 기본 동작이지만, 그렇다고 목 데이터를
+          실제 판독인 척 보여주면 그건 데모가 아니라 거짓말이 된다. */}
+      {result.isDemo && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: "#EDEAE3",
+            border: `0.5px solid ${HAIRLINE}`,
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 16,
+          }}
+        >
+          <span style={{ fontFamily: MONO, fontSize: 8, color: CANVAS, background: MUTED, borderRadius: 4, padding: "3px 6px", letterSpacing: "1px", flexShrink: 0 }}>
+            DEMO
+          </span>
+          <span style={{ fontSize: 11, color: MUTED, lineHeight: 1.5 }}>
+            분석 서버에 연결하지 못해 준비된 예시 결과를 보여주고 있습니다.
+          </span>
+        </div>
+      )}
+
+      {/* 영양성분 일부를 못 읽었으면 점수가 후하게 나온다 — 숨기지 않는다 */}
+      {result.partialRead && !result.isDemo && (
+        <div
+          style={{
+            background: "#FAF4E8",
+            border: "0.5px solid #E0D3B8",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 16,
+          }}
+        >
+          <span style={{ fontSize: 11, color: "#8A6D2F", lineHeight: 1.5 }}>
+            사진에서 읽지 못한 영양성분이 있어 그 항목은 계산에서 뺐습니다. 실제 점수는 더 낮을 수 있어요.
           </span>
         </div>
       )}
