@@ -248,24 +248,35 @@ export default function Home() {
     [profile],
   );
 
-  /** 실제 이력이 없으면 목 데이터로 채운다 — 빈 홈은 데모에서 미완성으로 읽힌다 */
+  /**
+   * 실제 이력 + 데모 항목을 함께 보여준다.
+   *
+   * 전에는 실제 이력이 있으면 목 데이터를 통째로 덮어썼다. 그래서 한 번이라도
+   * 스캔하면 발표에서 보여줄 리포트들이 목록에서 사라졌다. 목 항목을 지우지 않고
+   * 뒤에 붙이되, 같은 바코드가 이미 있으면 실제 이력이 이긴다.
+   */
   const recentItems: RecentItem[] = useMemo(() => {
-    if (recentScans.length > 0) {
-      return recentScans.slice(0, 6).map((s) => ({
-        barcode: s.barcode,
-        name: s.name,
-        sub: s.barcode.startsWith("photo-") ? "사진 분석" : "바코드",
-        score: s.score,
-        color: s.color,
-      }));
-    }
-    return MOCK_SCANS.slice(0, 6).map((s) => ({
+    const rows: RecentItem[] = recentScans.map((s) => ({
       barcode: s.barcode,
       name: s.name,
-      sub: s.via === "photo" ? "사진 분석" : s.brand,
+      sub: s.barcode.startsWith("photo-") ? "사진 분석" : "바코드",
       score: s.score,
       color: s.color,
     }));
+
+    const seen = new Set(rows.map((r) => r.barcode));
+    for (const m of MOCK_SCANS) {
+      if (seen.has(m.barcode)) continue;
+      seen.add(m.barcode);
+      rows.push({
+        barcode: m.barcode,
+        name: m.name,
+        sub: m.via === "photo" ? "사진 분석" : m.brand,
+        score: m.score,
+        color: m.color,
+      });
+    }
+    return rows.slice(0, 8);
   }, [recentScans]);
 
   /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { PROFILE_META, EMPTY_HEALTH_PROFILE, type ProfileType, type HealthProfile } from "@/lib/profiling";
@@ -99,6 +99,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
+      // 로컬 스캔 기록은 인증과 무관하다. 로그인 분기 뒤에 두면 데모 모드에서
+      // 일찍 반환하느라 내가 찍은 이력이 화면에 안 뜬다.
+      try {
+        const raw = localStorage.getItem("hindsight_recent_scans");
+        if (raw) setLocalScans(JSON.parse(raw) as RecentScan[]);
+      } catch { /* 값이 깨졌으면 없는 것으로 본다 */ }
+
       if (!supabase) { setLoading(false); return; }
       // getUser() 는 매번 네트워크를 탄다. 오프라인이면 응답을 기다리다 화면이
       // 멈추므로 로컬 세션만 읽는다 — 여기서 필요한 건 인가가 아니라 표시 여부고,
@@ -163,11 +170,6 @@ export default function ProfilePage() {
         .limit(20);
       setScanHistory(history ?? []);
 
-      try {
-        const raw = localStorage.getItem("hindsight_recent_scans");
-        if (raw) setLocalScans(JSON.parse(raw));
-      } catch { /* ignore */ }
-
       const { data: posts } = await supabase
         .from("community_posts")
         .select("id, title, likes_count, comments_count, category, created_at")
@@ -180,6 +182,50 @@ export default function ProfilePage() {
     }
     load();
   }, [router, supabase]);
+
+  /**
+   * 최근 스캔 목록 = 실제 이력 + 데모 항목.
+   *
+   * 전에는 셋 중 하나만 골랐다(서버 이력 > 로컬 기록 > 목 데이터). 그래서 실제로
+   * 한 건이라도 스캔하면 데모용 리포트가 통째로 사라졌다. 발표에서 보여줄 항목이
+   * 사용자 이력 유무에 따라 없어지면 안 되므로, 목 항목을 지우지 않고 뒤에 붙인다.
+   * 같은 바코드가 이미 있으면 실제 이력이 이긴다.
+   */
+  const recentRows = useMemo(() => {
+    const rows = [
+      ...scanHistory.map((s) => ({
+        key: s.id,
+        barcode: s.barcode,
+        name: s.product_name || "알 수 없는 제품",
+        sub: `${s.barcode} · ${new Date(s.scanned_at).toLocaleDateString("ko-KR")}`,
+        score: s.score,
+        color: getScoreColor(s.score),
+      })),
+      ...localScans.map((s) => ({
+        key: `local-${s.barcode}`,
+        barcode: s.barcode,
+        name: s.name,
+        sub: s.barcode,
+        score: s.score,
+        color: s.color,
+      })),
+    ];
+
+    const seen = new Set(rows.map((r) => r.barcode));
+    for (const m of MOCK_SCANS) {
+      if (seen.has(m.barcode)) continue;
+      seen.add(m.barcode);
+      rows.push({
+        key: `mock-${m.barcode}`,
+        barcode: m.barcode,
+        name: m.name,
+        sub: `${m.brand} · ${m.via === "photo" ? "사진 분석" : "바코드"}`,
+        score: m.score,
+        color: m.color,
+      });
+    }
+    return rows;
+  }, [scanHistory, localScans]);
 
   const handleSignOut = async () => {
     // supabase 는 키가 없으면 null 이다. 가드 없이 .auth 를 부르면 로그아웃
@@ -325,46 +371,19 @@ export default function ProfilePage() {
                 RECENT · 최근 스캔
               </p>
 
-              {scanHistory.length > 0 ? (
-                scanHistory.map((s, i) => (
-                  <ScanRow
-                    index={i}
-                    key={s.id}
-                    name={s.product_name || "알 수 없는 제품"}
-                    sub={`${s.barcode} · ${new Date(s.scanned_at).toLocaleDateString("ko-KR")}`}
-                    score={s.score}
-                    color={getScoreColor(s.score)}
-                    onClick={() => router.push(reportHref(s.barcode))}
-                  />
-                ))
-              ) : localScans.length > 0 ? (
-                localScans.map((s, i) => (
-                  <ScanRow
-                    index={i}
-                    key={s.barcode}
-                    name={s.name}
-                    sub={s.barcode}
-                    score={s.score}
-                    color={s.color}
-                    onClick={() => router.push(reportHref(s.barcode))}
-                  />
-                ))
-              ) : (
-                MOCK_SCANS.map((s, i) => (
-                  <ScanRow
-                    index={i}
-                    key={s.barcode}
-                    name={s.name}
-                    sub={`${s.brand} · ${s.via === "photo" ? "사진 분석" : "바코드"}`}
-                    score={s.score}
-                    color={s.color}
-                    // 사진 분석 항목이라고 촬영 화면으로 보내면 안 된다 —
-                    // 이력을 누른 사람은 그때 나온 리포트를 다시 보려는 것이다.
-                    // reportHref 가 리포트 유무를 보고 알아서 갈라준다.
-                    onClick={() => router.push(reportHref(s.barcode))}
-                  />
-                ))
-              )}
+              {recentRows.map((r, i) => (
+                <ScanRow
+                  index={i}
+                  key={r.key}
+                  name={r.name}
+                  sub={r.sub}
+                  score={r.score}
+                  color={r.color}
+                  // 사진 분석 항목이라고 촬영 화면으로 보내면 안 된다 —
+                  // 이력을 누른 사람은 그때 나온 리포트를 다시 보려는 것이다.
+                  onClick={() => router.push(reportHref(r.barcode))}
+                />
+              ))}
             </section>
           </div>
         )}
