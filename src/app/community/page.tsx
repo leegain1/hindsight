@@ -268,8 +268,7 @@ export default function CommunityPage() {
         onClick={() => router.push("/community/write")}
         style={{
           position: "fixed",
-          // 홈 챗봇 버튼과 같은 규칙 — 탭바 높이는 기기마다 다르다
-          bottom: "calc(78px + env(safe-area-inset-bottom))",
+          bottom: 88,
           right: 24,
           padding: "12px 20px",
           background: "#0A0A0A",
@@ -279,7 +278,7 @@ export default function CommunityPage() {
           alignItems: "center",
           gap: 8,
           cursor: "pointer",
-          zIndex: 110,
+          zIndex: 50,
           boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
         }}
       >
