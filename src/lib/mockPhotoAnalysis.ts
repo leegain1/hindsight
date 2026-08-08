@@ -20,7 +20,13 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-/** 파이프라인 단계 — 발표 슬라이드 4-2 의 YOLO → OCR → Claude 흐름을 화면으로 보여준다 */
+/**
+ * 파이프라인 단계 — 화면에 진행 상황으로 그린다.
+ *
+ * 라벨은 **실제로 코드가 하는 일**과 맞춘다. 전에는 YOLO·OCR 로 적혀 있었는데
+ * 둘 다 붙여둔 적이 없다(의존성 0개). 화면에 없는 기술이 적혀 있으면 발표에서
+ * "YOLO 어떻게 학습시켰나요" 라는 질문에 답이 막힌다.
+ */
 export interface PipelineStage {
   id: string;
   label: string;
@@ -30,10 +36,10 @@ export interface PipelineStage {
 }
 
 export const PIPELINE_STAGES: PipelineStage[] = [
-  { id: "detect", label: "제품 영역 검출", detail: "YOLO", atMs: 700 },
-  { id: "ocr", label: "제품명·브랜드 판독", detail: "OCR", atMs: 1500 },
-  { id: "identify", label: "제품 식별 및 성분 조회", detail: "Claude Vision", atMs: 3100 },
-  { id: "verify", label: "식약처 DB 교차검증", detail: "공식 데이터", atMs: 3900 },
+  { id: "quality", label: "촬영 품질 검사", detail: "기기 내 처리", atMs: 600 },
+  { id: "read", label: "표시사항 판독", detail: "Claude Vision", atMs: 2200 },
+  { id: "match", label: "주의성분 교차검증", detail: "규칙 기반", atMs: 3200 },
+  { id: "score", label: "내 기준 재계산", detail: "개인 프로파일", atMs: 3900 },
 ];
 
 export const TOTAL_PIPELINE_MS =
