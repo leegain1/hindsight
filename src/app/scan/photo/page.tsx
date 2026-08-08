@@ -250,12 +250,42 @@ export default function PhotoScanPage() {
         pixelRatio: 2,
         cacheBust: true,
       });
+
+      // 파일명에 쓸 수 없는 문자를 걷어낸다
+      const rawName = (nameInput.trim() || result?.detected.productName) ?? "report";
+      const fileName = `hindsight-${rawName.replace(/[\\/:*?"<>|]/g, "")}.png`;
+
+      // data: URL 을 그대로 a[download] 에 물리면 아이폰에서 저장되지 않는다.
+      // iOS 사파리는 data: URL 다운로드를 지원하지 않고, 긴 리포트는 URL 길이
+      // 제한에도 걸린다. blob 으로 바꾸면 iOS 13+ 에서도 동작한다.
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], fileName, { type: "image/png" });
+
+      // 폰에서는 공유 시트가 가장 확실하다 — "이미지 저장" 으로 사진 앱에 바로 들어간다
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: rawName });
+          setImageState("done");
+          setTimeout(() => setImageState("idle"), 2500);
+          return;
+        } catch (err) {
+          // 사용자가 공유 시트를 닫은 것은 실패가 아니다
+          if (err instanceof DOMException && err.name === "AbortError") {
+            setImageState("idle");
+            return;
+          }
+          // 그 외(권한·제스처 만료)는 아래 다운로드로 넘어간다
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const name =
-        (nameInput.trim() || result?.detected.productName) ?? "report";
-      a.download = `hindsight-${name}.png`;
-      a.href = dataUrl;
+      a.download = fileName;
+      a.href = url;
       a.click();
+      // 클릭 직후 해제하면 다운로드가 시작되기 전에 URL 이 죽는다
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
       setImageState("done");
       setTimeout(() => setImageState("idle"), 2500);
     } catch (err) {
