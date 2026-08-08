@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase";
 import { PROFILE_META, EMPTY_HEALTH_PROFILE, type ProfileType, type HealthProfile } from "@/lib/profiling";
 import { getScoreColor } from "@/lib/scoring";
 import { MOCK_SCANS } from "@/lib/mockScans";
+import { reportHref } from "@/lib/mockReports";
 import PageHeader from "@/components/PageHeader";
 
 interface SavedAnalysis {
@@ -319,7 +320,7 @@ export default function ProfilePage() {
                     sub={`${s.barcode} · ${new Date(s.scanned_at).toLocaleDateString("ko-KR")}`}
                     score={s.score}
                     color={getScoreColor(s.score)}
-                    onClick={() => router.push(`/scan/result/${s.barcode}`)}
+                    onClick={() => router.push(reportHref(s.barcode))}
                   />
                 ))
               ) : localScans.length > 0 ? (
@@ -331,7 +332,7 @@ export default function ProfilePage() {
                     sub={s.barcode}
                     score={s.score}
                     color={s.color}
-                    onClick={() => router.push(`/scan/result/${s.barcode}`)}
+                    onClick={() => router.push(reportHref(s.barcode))}
                   />
                 ))
               ) : (
@@ -346,7 +347,7 @@ export default function ProfilePage() {
                     onClick={
                       s.via === "photo"
                         ? () => router.push("/scan/photo")
-                        : () => router.push(`/scan/result/${s.barcode}`)
+                        : () => router.push(reportHref(s.barcode))
                     }
                   />
                 ))

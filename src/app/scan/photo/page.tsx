@@ -13,6 +13,7 @@ import Link from "next/link";
 import CameraCapture from "@/components/CameraCapture";
 import ImageCropper from "@/components/ImageCropper";
 import { inspectImage } from "@/lib/imageQuality";
+import { MOCK_REPORTS } from "@/lib/mockReports";
 import {
   analyzePhoto,
   RetakeError,
@@ -125,6 +126,20 @@ export default function PhotoScanPage() {
   // localStorage 는 서버에 없다 — 마운트 후에 읽는다
   useEffect(() => {
     setSavedList(readSaved());
+  }, []);
+
+  // 최근 스캔 목록에서 항목을 누르면 ?report=<barcode> 로 들어온다.
+  // 새로 찍지 않고 저장된 리포트를 그대로 결과 화면에 올린다 — 화면이 같아야
+  // 리허설에서 본 것과 발표에서 보는 것이 일치한다.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("report");
+    const saved = id ? MOCK_REPORTS[id] : undefined;
+    if (!saved) return;
+    // 이펙트 본문에서 곧바로 setState 하지 않는다
+    void Promise.resolve().then(() => {
+      setResult({ ...saved, isDemo: false });
+      setPhase("done");
+    });
   }, []);
 
   // 홈에서 "제품 사진으로 분석"을 누르고 들어오면 곧바로 선택 시트를 띄운다.

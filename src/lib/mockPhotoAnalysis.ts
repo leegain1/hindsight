@@ -250,7 +250,8 @@ export const DEMO_REVIEWS: ReviewSummary = {
   ],
 };
 
-const DEMO_PRODUCT: PhotoAnalysisResult = {
+/** 사진 분석 데모 결과. 최근 스캔 목록의 리포트로도 재사용한다(mockReports.ts) */
+export const DEMO_PRODUCT: PhotoAnalysisResult = {
   detected: {
     productName: "흑임자 크런치 그래놀라",
     brand: "온데이즈",

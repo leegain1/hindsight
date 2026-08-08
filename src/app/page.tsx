@@ -27,6 +27,7 @@ import { getProductsByCategory, getScoreBadgeColor } from "@/lib/productData";
 import { EMPTY_HEALTH_PROFILE, type HealthProfile } from "@/lib/profiling";
 import { MOCK_SCANS } from "@/lib/mockScans";
 import { sortMockPosts } from "@/lib/mockCommunity";
+import { reportHref } from "@/lib/mockReports";
 import { isAnonBrowsing } from "@/lib/session";
 import ChatModal from "@/components/ChatModal";
 
@@ -485,7 +486,7 @@ export default function Home() {
               <button
                 key={item.barcode}
                 type="button"
-                onClick={() => router.push(`/scan/result/${item.barcode}`)}
+                onClick={() => router.push(reportHref(item.barcode))}
                 style={{
                   ["--i" as string]: i,
                   width: "100%",
