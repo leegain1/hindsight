@@ -100,8 +100,22 @@ export default function ProfilePage() {
   useEffect(() => {
     async function load() {
       if (!supabase) { setLoading(false); return; }
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace("/auth/login?next=/profile"); return; }
+      // getUser() 는 매번 네트워크를 탄다. 오프라인이면 응답을 기다리다 화면이
+      // 멈추므로 로컬 세션만 읽는다 — 여기서 필요한 건 인가가 아니라 표시 여부고,
+      // 실제 데이터 보호는 RLS 가 한다.
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
+      if (!user) {
+        // 데모 모드에서는 로그인으로 튕기지 않는다. proxy 는 통과시키는데 여기서
+        // 다시 막으면 인터넷 없는 발표장에서 프로필 탭을 아예 못 보여준다.
+        // 로그인 전 화면은 목 데이터로 채워진다(아래 MOCK_SCANS 폴백).
+        if (process.env.NEXT_PUBLIC_DEMO_MODE !== "1") {
+          router.replace("/auth/login?next=/profile");
+          return;
+        }
+        setLoading(false);
+        return;
+      }
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -344,11 +358,10 @@ export default function ProfilePage() {
                     sub={`${s.brand} · ${s.via === "photo" ? "사진 분석" : "바코드"}`}
                     score={s.score}
                     color={s.color}
-                    onClick={
-                      s.via === "photo"
-                        ? () => router.push("/scan/photo")
-                        : () => router.push(reportHref(s.barcode))
-                    }
+                    // 사진 분석 항목이라고 촬영 화면으로 보내면 안 된다 —
+                    // 이력을 누른 사람은 그때 나온 리포트를 다시 보려는 것이다.
+                    // reportHref 가 리포트 유무를 보고 알아서 갈라준다.
+                    onClick={() => router.push(reportHref(s.barcode))}
                   />
                 ))
               )}
