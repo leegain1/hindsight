@@ -757,8 +757,11 @@ export default function Home() {
         style={{
           position: "fixed",
           right: 20,
-          bottom: 80,
-          zIndex: 90,
+          // 탭바(최소 64px + 홈 인디케이터 여백) 위로 14px 띄운다. 고정 px 로 두면
+          // 노치 있는 기기에서 탭바가 그만큼 두꺼워져 버튼 아래가 가려진다.
+          bottom: "calc(78px + env(safe-area-inset-bottom))",
+          // 탭바가 zIndex 100 이다. 그보다 낮으면 겹치는 순간 뒤로 숨는다.
+          zIndex: 110,
           width: 54,
           height: 54,
           minHeight: 0,
