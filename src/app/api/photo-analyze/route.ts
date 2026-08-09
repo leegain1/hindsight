@@ -125,26 +125,39 @@ export async function POST(request: NextRequest) {
     const shown = score.personalScore;
     const label = verdictOf(shown);
 
+    // DB 에서 확인한 주의성분과 표기만 보고 깎은 미확인 첨가물을 함께 싣되,
+    // 뒤쪽은 이유 문구로 구분한다. 미확인 감점을 빼버리면 점수는 내려갔는데
+    // "주의할 성분" 이 비어 있어 왜 깎였는지 화면에서 사라진다.
     const risks: RiskItem[] = score.deductions
-      .filter((d) => d.kind === "ingredient")
+      .filter((d) => d.kind === "ingredient" || d.kind === "unknown")
       .map((d) => ({
         name: d.label,
         reason:
           `${d.reason} · -${d.penalty}점` +
           (d.matchedAs && d.matchedAs !== d.label ? ` (표기: ${d.matchedAs})` : ""),
-        level: levelOf(d.penalty),
+        level: d.kind === "unknown" ? ("low" as const) : levelOf(d.penalty),
       }));
+
+    const confirmed = score.deductions.filter((d) => d.kind === "ingredient").length;
+    const unknownHits = score.deductions.filter((d) => d.kind === "unknown").length;
 
     const partial = score.skippedNutrients.length > 0;
     const bodyParts = [
-      `원재료 ${extraction.ingredients.length}건 중 주의 성분 ${risks.length}건을 찾았습니다.`,
+      `원재료 ${extraction.ingredients.length}건 중 주의 성분 ${confirmed}건을 찾았습니다.`,
       score.nutrientPenalty > 0
         ? `영양성분에서 ${score.nutrientPenalty}점, 주의 성분에서 ${score.ingredientPenalty}점 감점됐습니다.`
         : `영양성분 감점은 없고, 주의 성분에서 ${score.ingredientPenalty}점 감점됐습니다.`,
+      unknownHits > 0
+        ? `DB에 없지만 첨가물로 표기된 ${unknownHits}건에서 ${score.unknownPenalty}점을 더 뺐습니다.`
+        : "",
       score.appliedGoals.length > 0 && score.personalScore !== score.baseScore
         ? `회원님의 ${score.appliedGoals.join("·")} 조건을 반영해 기본 ${score.baseScore}점에서 ${score.personalScore}점으로 조정했습니다.`
         : "",
       partial ? `${score.skippedNutrients.join("·")}은 사진에서 읽지 못해 계산에서 뺐습니다.` : "",
+      // 상한이 걸렸으면 점수의 성격이 달라진다 — 반드시 말해야 한다
+      score.ceiling < 100
+        ? `확인하지 못한 항목이 있어 이 사진으로는 ${score.ceiling}점을 넘겨 매길 수 없습니다.`
+        : "",
     ].filter(Boolean);
 
     const result: PhotoAnalysisResult & {

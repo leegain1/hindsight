@@ -946,6 +946,14 @@ function Result({
               · {r}
             </p>
           ))}
+          {/* 상한이 걸렸으면 점수의 성격 자체가 다르다 — "검증된 안전도"가 아니라
+              "확인된 범위 안에서의 상한"이다. 근거를 그대로 편다. */}
+          {result.scoreDetail.ceiling < 100 && (
+            <p style={{ fontSize: 11, color: "#6A5A3F", lineHeight: 1.6, marginTop: 5, paddingTop: 5, borderTop: "0.5px solid rgba(0,0,0,0.08)" }}>
+              그래서 이 사진으로는 <strong style={{ fontWeight: 600 }}>{result.scoreDetail.ceiling}점까지만</strong> 매길 수 있습니다
+              {result.scoreDetail.ceilingReasons.length > 0 && ` (${result.scoreDetail.ceilingReasons.join(", ")})`}
+            </p>
+          )}
         </div>
       )}
 
@@ -1041,8 +1049,10 @@ function Result({
             </p>
           </div>
           <p style={{ fontSize: 11, color: MUTED, lineHeight: 1.6, marginBottom: 10 }}>
-            아래 성분은 저희 DB에 없어 위험도를 평가하지 못했습니다. 감점되지 않았을 뿐,
-            안전하다는 뜻은 아닙니다.
+            아래 성분은 저희 DB에 없어 개별 위험도를 확인하지 못했습니다.
+            {result.scoreDetail.unknownPenalty > 0
+              ? ` 이 중 첨가물로 표기된 항목은 ${result.scoreDetail.unknownPenalty}점 감점했고, 나머지는 점수 상한에 반영했습니다.`
+              : " 확인하지 못한 만큼 점수 상한을 낮췄습니다."}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {result.scoreDetail.unassessed.map((n) => (

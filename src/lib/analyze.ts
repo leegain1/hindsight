@@ -8,7 +8,13 @@
  * 를 설명할 수 없다. 발표에서 "광고가 아니라 근거로"를 주장하려면 감점 근거가
  * 코드 안에 있어야 하고, 같은 사진은 항상 같은 점수가 나와야 한다.
  *
- *   최종점수 = clamp(0, 100 - 영양감점 - 주의성분감점)
+ *   최종점수 = min(신뢰상한, clamp(0, 100 - 영양감점 - 주의성분감점 - 미확인첨가물감점))
+ *
+ * 신뢰상한이 왜 있나: 감점만으로 점수를 내면 **판독이 부실할수록 점수가 높아진다.**
+ * 영양성분을 하나도 못 읽고 성분도 전부 DB 밖이면 감점이 0 이라 100 점이 나온다.
+ * 실제로 불닭소스 사진에서 그렇게 됐다 — 원재료 36건 중 0건 확인, 영양성분 3개
+ * 모두 판독 실패, 그래서 만점. 모르는 것은 감점 사유가 아니라 **주장할 수 있는
+ * 범위의 상한**을 깎는 사유다.
  */
 
 import db from "../../data/ingredient_risk_db.json";
@@ -32,9 +38,27 @@ interface CautionEntry {
   sensitive_group?: string[];
 }
 
+/** DB 밖 성분 중 표기만으로 첨가물인 게 드러나는 것에 매기는 규칙 */
+interface UnknownAdditiveRules {
+  penalty_each: number;
+  max_total: number;
+  patterns: string[];
+}
+
+/** 확인하지 못한 축이 있을 때 점수의 상한을 내리는 규칙 */
+interface CeilingRules {
+  per_unread_nutrient: number;
+  low_coverage_threshold: number;
+  low_coverage_min_unassessed: number;
+  low_coverage_penalty: number;
+  floor: number;
+}
+
 const NUTRIENT_RULES = db.nutrient_rules as Record<NutrientKey, NutrientBand[]>;
 const CAUTION = db.caution_ingredients as Record<string, CautionEntry>;
 const WEIGHTS = db.personalization_weights as Record<string, Record<string, number>>;
+const UNKNOWN_RULES = db.unknown_additive_rules as UnknownAdditiveRules;
+const CEILING_RULES = db.confidence_ceiling as CeilingRules;
 
 const NUTRIENT_LABEL: Record<NutrientKey, string> = {
   sugar_g: "당류",
@@ -52,7 +76,12 @@ const NUTRIENT_UNIT: Record<NutrientKey, string> = {
 
 /** 감점 한 건. 화면에서 "왜 이 점수인지" 그대로 보여줄 수 있어야 한다. */
 export interface Deduction {
-  kind: "nutrient" | "ingredient";
+  /**
+   * unknown = DB 에 없지만 표기가 첨가물인 성분.
+   * ingredient(=DB 등재 주의성분)와 구분해야 화면에서 "확인된 감점"과
+   * "모르는 채로 깎은 감점"을 섞어 보여주지 않는다.
+   */
+  kind: "nutrient" | "ingredient" | "unknown";
   /** 화면에 쓰는 이름 — 영양소명 또는 DB 의 성분 표준명 */
   label: string;
   /** 사진에서 실제로 읽은 표기 (성분일 때만). 표준명과 다를 수 있다 */
@@ -77,7 +106,17 @@ export interface AnalysisScore {
   personalScore: number;
   nutrientPenalty: number;
   ingredientPenalty: number;
+  /** DB 밖 첨가물 표기에서 깎인 점수 */
+  unknownPenalty: number;
   deductions: Deduction[];
+
+  /**
+   * 이 사진으로 주장할 수 있는 점수의 상한.
+   * 감점을 다 해도 이 값을 넘지 못한다. 100 이면 상한이 걸리지 않았다는 뜻.
+   */
+  ceiling: number;
+  /** 상한이 내려간 이유 — 점수 옆에 그대로 보여준다 */
+  ceilingReasons: string[];
   /** 적용된 개인화 키 (당관리·혈압관리·체중관리·임신) */
   appliedGoals: string[];
   /**
@@ -98,8 +137,11 @@ export interface AnalysisScore {
    * DB 에 없어 평가하지 못한 성분 표기 = 미확인 성분.
    *
    * 이걸 그냥 버리면 "감점이 없다"가 "안전하다"로 읽힌다. 우리 DB 는 주의성분
-   * 9종짜리 샘플이라 실제 제품 성분 대부분이 여기로 떨어진다. 모르는 것을
-   * 모른다고 말하지 않으면 점수가 실제보다 후해 보인다.
+   * 샘플이라 실제 제품 성분 상당수가 여기로 떨어진다. 모르는 것을 모른다고
+   * 말하지 않으면 점수가 실제보다 후해 보인다.
+   *
+   * 이 중 표기가 첨가물인 것(용도명·화학명)은 unknownPenalty 로 일부 감점되고,
+   * 나머지는 ceiling 을 통해 점수 상한에 반영된다.
    */
   unassessed: string[];
   /** 평가한 성분 / 전체 성분 (0~1) */
@@ -247,6 +289,92 @@ function scoreIngredients(
   return deductions.sort((a, b) => b.penalty - a.penalty);
 }
 
+/**
+ * DB 밖 성분 중 표기 자체가 첨가물인 것을 감점한다.
+ *
+ * 근거: 한국 식품표시 규칙상 첨가물은 용도명(향미증진제·산도조절제·유화제…)이나
+ * 화학명(~인산·아질산~)으로 적게 되어 있다. 그 표기가 붙어 있으면 개별 위험도는
+ * 몰라도 **첨가물이라는 사실 자체는 확실하다.** 그래서 확인된 주의성분보다는
+ * 가볍게(건당 2점), 그러나 0 이 아니게 깎는다.
+ *
+ * 상한(max_total)이 필요한 이유: 성분이 40건인 제품과 8건인 제품에 같은 잣대를
+ * 대야 한다. 상한이 없으면 성분 수가 많은 것만으로 0 점이 나온다.
+ *
+ * 여기서는 개인화 가중치를 쓰지 않는다. 무엇인지 모르는 성분에 "당뇨에 나쁘다"
+ * 같은 가중치를 붙이는 건 근거 없는 주장이다.
+ */
+function scoreUnknownAdditives(unassessed: string[]): Deduction[] {
+  const deductions: Deduction[] = [];
+  let spent = 0;
+
+  for (const name of unassessed) {
+    if (spent >= UNKNOWN_RULES.max_total) break;
+    const n = normalize(name);
+    const pattern = UNKNOWN_RULES.patterns.find((p) => n.includes(normalize(p)));
+    if (!pattern) continue;
+
+    const penalty = Math.min(UNKNOWN_RULES.penalty_each, UNKNOWN_RULES.max_total - spent);
+    spent += penalty;
+    deductions.push({
+      kind: "unknown",
+      label: name,
+      category: "미확인 첨가물",
+      basePenalty: UNKNOWN_RULES.penalty_each,
+      weight: 1,
+      penalty,
+      reason: `'${pattern}' 표기 · DB에 없어 개별 위험도는 확인하지 못함`,
+      personalized: false,
+    });
+  }
+
+  return deductions;
+}
+
+/**
+ * 점수의 상한을 계산한다.
+ *
+ * 감점은 "이만큼 나쁘다"는 주장이고, 상한은 "이 이상은 주장할 수 없다"는 선언이다.
+ * 둘을 섞으면 안 된다 — 못 읽은 나트륨을 감점하면 없는 수치를 지어내는 것이고,
+ * 그냥 넘기면 판독이 부실할수록 점수가 올라간다. 상한이 그 사이를 메운다.
+ *
+ * floor 가 있는 이유: 상한은 "좋다고 말할 수 없다"까지만 해야 한다. 판독을 못 했다는
+ * 이유로 '위험' 등급까지 끌어내리면 그건 근거 없는 반대 방향의 주장이 된다.
+ */
+function computeCeiling(
+  skippedNutrients: string[],
+  coverage: number,
+  unassessedCount: number,
+  /** 미확인 성분 중 표기가 첨가물인 건수 — 이게 0 이면 커버리지 공백은 무해하다 */
+  unknownAdditiveCount: number,
+): { ceiling: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let ceiling = 100;
+
+  if (skippedNutrients.length > 0) {
+    ceiling -= skippedNutrients.length * CEILING_RULES.per_unread_nutrient;
+    reasons.push(
+      `${skippedNutrients.join("·")}을 읽지 못해 ${skippedNutrients.length * CEILING_RULES.per_unread_nutrient}점 상한`,
+    );
+  }
+
+  // 커버리지가 낮다는 것만으로는 상한을 걸지 않는다. 이 DB 는 주의성분만 담고
+  // 있어서 **깨끗한 제품일수록 매칭이 0건**이다 — 비율만 보면 '정제수' 한 줄짜리
+  // 생수나 귀리·아몬드뿐인 그래놀라가 벌을 받는다. 확인하지 못한 것 중에 실제로
+  // 첨가물이 섞여 있을 때만, 즉 진짜 지식 공백일 때만 상한을 건다.
+  if (
+    unknownAdditiveCount > 0 &&
+    unassessedCount >= CEILING_RULES.low_coverage_min_unassessed &&
+    coverage < CEILING_RULES.low_coverage_threshold
+  ) {
+    ceiling -= CEILING_RULES.low_coverage_penalty;
+    reasons.push(
+      `원재료 ${Math.round(coverage * 100)}%만 DB에서 확인돼 ${CEILING_RULES.low_coverage_penalty}점 상한`,
+    );
+  }
+
+  return { ceiling: Math.max(CEILING_RULES.floor, ceiling), reasons };
+}
+
 /** 사용자가 피하고 싶다고 고른 항목과의 일치 — 점수는 건드리지 않고 표시만 한다 */
 function findAvoidHits(
   ingredients: ExtractedIngredient[],
@@ -283,23 +411,37 @@ export function analyze(
 ): AnalysisScore {
   const appliedGoals = toPersonalizationKeys(profile);
 
+  const { assessed, unassessed } = crossCheck(ingredients);
+  const coverage = ingredients.length ? assessed.length / ingredients.length : 0;
+
+  const { deductions: nutrientDeductions, skipped } = scoreNutrition(nutrition, appliedGoals);
+  const ingredientDeductions = scoreIngredients(ingredients, appliedGoals);
+  const unknownDeductions = scoreUnknownAdditives(unassessed);
+  const deductions = [...nutrientDeductions, ...ingredientDeductions, ...unknownDeductions];
+
+  const nutrientPenalty = sum(nutrientDeductions);
+  const ingredientPenalty = sum(ingredientDeductions);
+  const unknownPenalty = sum(unknownDeductions);
+
+  const { ceiling, reasons: ceilingReasons } = computeCeiling(
+    skipped,
+    coverage,
+    unassessed.length,
+    unknownDeductions.length,
+  );
+
+  // 상한은 개인 조건과 무관하다 — 판독 품질의 문제지 그 사람의 문제가 아니다.
+  // 그래서 기본 점수에도 같은 상한을 씌운다. 안 그러면 "일반 90 → 회원님 60" 처럼
+  // 개인 조건 탓으로 보이는 낙차가 생긴다.
+  const capped = (raw: number) => Math.min(ceiling, clamp(raw));
+
   // 기본 점수는 가중치 없이 한 번 더 계산한다. "같은 제품, 다른 결과"를 보여주려면
-  // 비교 대상인 기본 점수가 있어야 한다.
+  // 비교 대상인 기본 점수가 있어야 한다. 미확인 감점은 가중치를 안 타므로 그대로 쓴다.
   const basePlain = [
     ...scoreNutrition(nutrition, []).deductions,
     ...scoreIngredients(ingredients, []),
   ];
-  const baseScore = clamp(100 - sum(basePlain));
-
-  const { deductions: nutrientDeductions, skipped } = scoreNutrition(nutrition, appliedGoals);
-  const ingredientDeductions = scoreIngredients(ingredients, appliedGoals);
-  const deductions = [...nutrientDeductions, ...ingredientDeductions];
-
-  const nutrientPenalty = sum(nutrientDeductions);
-  const ingredientPenalty = sum(ingredientDeductions);
-
-  const { assessed, unassessed } = crossCheck(ingredients);
-  const coverage = ingredients.length ? assessed.length / ingredients.length : 0;
+  const baseScore = capped(100 - sum(basePlain) - unknownPenalty);
 
   // 신뢰도는 한 단계씩 깎아 내린다. 원인이 겹치면 그만큼 더 내려간다.
   const reasons: string[] = [];
@@ -320,9 +462,12 @@ export function analyze(
 
   return {
     baseScore,
-    personalScore: clamp(100 - nutrientPenalty - ingredientPenalty),
+    personalScore: capped(100 - nutrientPenalty - ingredientPenalty - unknownPenalty),
     nutrientPenalty,
     ingredientPenalty,
+    unknownPenalty,
+    ceiling,
+    ceilingReasons,
     deductions: deductions.sort((a, b) => b.penalty - a.penalty),
     appliedGoals,
     skippedNutrients: skipped,

@@ -1,8 +1,9 @@
 {
   "_meta": {
-    "설명": "HINDSIGHT+ 성분 위험도 샘플 DB. 영양성분 감점 구간 + 주의성분 감점 + 개인화 가중치.",
+    "설명": "HINDSIGHT+ 성분 위험도 샘플 DB. 영양성분 감점 구간 + 주의성분 감점 + 미확인 성분 규칙 + 개인화 가중치.",
     "출처_기준": "식약처 식품첨가물 정보 / 식품영양성분 DB 기준으로 확장 예정 (샘플)",
-    "점수공식": "최종점수 = 100 - 영양성분감점 - 주의성분감점 (0~100 clamp)"
+    "점수공식": "최종점수 = min(신뢰상한, clamp(0, 100 - 영양감점 - 주의성분감점 - 미확인첨가물감점))",
+    "신뢰상한": "확인하지 못한 축이 있으면 점수의 상한을 내린다. 못 읽은 것을 '문제 없음'으로 치면 정보가 적을수록 점수가 높아지는 역설이 생긴다."
   },
 
   "nutrient_rules": {
@@ -19,8 +20,36 @@
     "안식향산나트륨": { "category": "보존료",     "penalty": 6, "aliases": ["sodium benzoate", "벤조산나트륨"] },
     "아질산나트륨":   { "category": "보존료/발색제","penalty": 8, "aliases": ["sodium nitrite", "아질산염"], "sensitive_group": ["영유아"] },
     "합성향료":       { "category": "향료",       "penalty": 3, "aliases": ["synthetic flavor", "인공향료", "합성착향료", "착향료", "합성착향", "혼합제제향료"] },
-    "L-글루탐산나트륨":{ "category": "향미증진제", "penalty": 3, "aliases": ["msg", "MSG", "글루탐산나트륨"] },
-    "카페인":         { "category": "기타",       "penalty": 4, "aliases": ["caffeine"], "sensitive_group": ["임산부", "영유아"] }
+    "L-글루탐산나트륨":{ "category": "향미증진제", "penalty": 3, "aliases": ["msg", "MSG", "글루탐산나트륨", "향미증진제", "리보뉴클레오타이드", "뉴클레오타이드"] },
+    "카페인":         { "category": "기타",       "penalty": 4, "aliases": ["caffeine"], "sensitive_group": ["임산부", "영유아"] },
+
+    "소르빈산칼륨":   { "category": "보존료",     "penalty": 6, "aliases": ["potassium sorbate", "소르빈산", "솔빈산칼륨"] },
+    "카라멜색소":     { "category": "착색료",     "penalty": 4, "aliases": ["caramel color", "카라멜"] },
+    "인산염":         { "category": "산도조절제/결착제", "penalty": 3, "aliases": ["폴리인산나트륨", "산성피로인산나트륨", "제일인산칼슘", "제이인산나트륨", "메타인산나트륨"] },
+    "액상과당":       { "category": "첨가당",     "penalty": 5, "aliases": ["고과당옥수수시럽", "옥수수시럽", "결정과당", "과당", "high fructose corn syrup"] },
+    "산분해간장":     { "category": "가공보조",   "penalty": 4, "aliases": ["아미노산간장", "산분해간장액"] }
+  },
+
+  "unknown_additive_rules": {
+    "설명": "표준명·aliases 어디에도 안 걸렸지만 표기 자체가 식품첨가물임을 드러내는 성분. 개별 위험도를 모르니 크게 깎지는 않되, 0점으로 두지도 않는다.",
+    "penalty_each": 2,
+    "max_total": 12,
+    "patterns": [
+      "감미료", "착색료", "색소", "착향료", "향료", "보존료", "산화방지제",
+      "표백제", "발색제", "팽창제", "유화제", "증점제", "안정제", "응고제",
+      "산도조절제", "향미증진제", "고결방지제", "피막제", "추출용제", "효소제",
+      "합성", "인산", "아질산", "뉴클레오", "글루탐산", "변성전분", "산분해"
+    ]
+  },
+
+  "confidence_ceiling": {
+    "설명": "확인하지 못한 축이 있으면 점수의 상한을 내린다. 점수는 '확인된 범위 안에서의 상한'이지 '검증된 안전도'가 아니다. 이게 없으면 판독이 부실할수록 점수가 높아지는 역설이 생긴다.",
+    "per_unread_nutrient": 10,
+    "low_coverage_threshold": 0.2,
+    "low_coverage_min_unassessed": 8,
+    "low_coverage_penalty": 10,
+    "floor": 55,
+    "주의": "커버리지 상한에 min_unassessed 조건이 붙는 이유 — 이 DB 는 주의성분만 담고 있어서 깨끗한 제품일수록 매칭이 0건이다. 비율만 보면 '정제수' 한 줄짜리 생수가 상한에 걸린다. 확인 못 한 성분이 실제로 많을 때만 적용한다."
   },
 
   "personalization_weights": {
