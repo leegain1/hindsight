@@ -114,36 +114,36 @@ flowchart TB
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/screenshots/home.png" width="100%" /><br/>
+<img src="docs/screenshots/home.png" width="220" /><br/>
 <b>홈</b><br/>
 사진 분석과 바코드 스캔을 나란히 둡니다. 최근 스캔·카테고리 평균·팩트체크가 이어집니다.
 </td>
 <td width="50%" valign="top">
-<img src="docs/screenshots/welcome.png" width="100%" /><br/>
+<img src="docs/screenshots/welcome.png" width="220" /><br/>
 <b>온보딩</b><br/>
 건강 목표와 질환을 먼저 받습니다. 당뇨가 있는 사람과 임산부에게 같은 점수일 수 없기 때문입니다.
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/screenshots/scan.png" width="100%" /><br/>
+<img src="docs/screenshots/scan.png" width="220" /><br/>
 <b>바코드 스캔</b><br/>
 <code>html5-qrcode</code>로 읽고 3단 폴백으로 제품을 찾습니다. 내장 DB → 사용자 등록 DB → Open Food Facts.
 </td>
 <td width="50%" valign="top">
-<img src="docs/screenshots/report.png" width="100%" /><br/>
+<img src="docs/screenshots/report.png" width="220" /><br/>
 <b>사진 분석 리포트</b> ← 핵심<br/>
 점수 옆에 <b>왜 그 점수인지</b>가 항상 붙습니다. 아래 참조.
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/screenshots/community.png" width="100%" /><br/>
+<img src="docs/screenshots/community.png" width="220" /><br/>
 <b>커뮤니티</b><br/>
 성분에 대한 질문과 후기. 협찬 표기 여부·구매 인증 비율을 뱃지로 드러냅니다.
 </td>
 <td width="50%" valign="top">
-<img src="docs/screenshots/profile.png" width="100%" /><br/>
+<img src="docs/screenshots/profile.png" width="220" /><br/>
 <b>프로필</b><br/>
 최근 스캔 이력에서 바로 리포트로 들어갑니다.
 </td>
