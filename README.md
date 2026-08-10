@@ -23,6 +23,58 @@ HINDSIGHT+는 바코드가 없어도 **사진 한 장으로** 분석합니다.
 
 ---
 
+## 아키텍처
+
+```mermaid
+flowchart TB
+    subgraph CLIENT["클라이언트 · PWA"]
+        CAM["CameraCapture<br/>가이드 프레임"]
+        CROP["ImageCropper<br/>원재료명 영역 크롭"]
+        QC["imageQuality<br/>흐림·반사 사전 검사"]
+        BAR["html5-qrcode<br/>바코드 스캔"]
+        UI["리포트 화면<br/>점수 · 감점 근거 · 신뢰도"]
+    end
+
+    subgraph SERVER["Next.js Route Handlers · Node.js"]
+        EXT["photoExtract<br/>판독 요청"]
+        ANA["analyze<br/>규칙 기반 점수<br/><b>LLM 없음 · 결정적</b>"]
+        API["/api/photo-analyze<br/>판독 + 점수 조립"]
+        PROD["제품 조회 3단 폴백"]
+    end
+
+    subgraph EXTERNAL["외부"]
+        CLAUDE["Claude Sonnet 5<br/>Vision · JSON Schema 강제"]
+        SB[("Supabase<br/>Auth · Postgres · RLS")]
+        OFF["Open Food Facts"]
+    end
+
+    DB[("ingredient_risk_db.json<br/>영양 구간 · 주의성분 · 가중치")]
+
+    CAM --> QC --> CROP --> API
+    BAR --> PROD
+    API --> EXT --> CLAUDE
+    CLAUDE -.판독 JSON.-> ANA
+    DB --> ANA
+    ANA --> API --> UI
+    PROD --> OFF
+    PROD --> UI
+    UI <--> SB
+
+    style ANA fill:#0A0A0A,color:#F5F2EC
+    style DB fill:#F5F2EC,color:#0A0A0A
+```
+
+**판독은 네트워크 너머에서, 판정은 우리 코드 안에서** 일어납니다.
+`analyze.ts`는 외부 호출이 없어 오프라인에서도, 발표장에서도 같은 값을 냅니다.
+
+| 경로 | 흐름 |
+|---|---|
+| **사진 분석** | 촬영 → 품질 검사 → 크롭 → `/api/photo-analyze` → Claude 판독 → 규칙 점수 → 리포트 |
+| **바코드** | 스캔 → 내장 DB → 사용자 등록 DB → Open Food Facts → 결과 |
+| **인증·이력** | Supabase Google OAuth · RLS. 키가 없으면 로컬 저장으로 폴백 |
+
+---
+
 ## 핵심 원칙 — 판독과 판정을 분리한다
 
 ```
@@ -59,43 +111,52 @@ HINDSIGHT+는 바코드가 없어도 **사진 한 장으로** 분석합니다.
 
 ## 화면
 
-### 온보딩 — 건강 조건을 먼저 받는다
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/screenshots/home.png" width="100%" /><br/>
+<b>홈</b><br/>
+사진 분석과 바코드 스캔을 나란히 둡니다. 최근 스캔·카테고리 평균·팩트체크가 이어집니다.
+</td>
+<td width="50%" valign="top">
+<img src="docs/screenshots/welcome.png" width="100%" /><br/>
+<b>온보딩</b><br/>
+건강 목표와 질환을 먼저 받습니다. 당뇨가 있는 사람과 임산부에게 같은 점수일 수 없기 때문입니다.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/screenshots/scan.png" width="100%" /><br/>
+<b>바코드 스캔</b><br/>
+<code>html5-qrcode</code>로 읽고 3단 폴백으로 제품을 찾습니다. 내장 DB → 사용자 등록 DB → Open Food Facts.
+</td>
+<td width="50%" valign="top">
+<img src="docs/screenshots/report.png" width="100%" /><br/>
+<b>사진 분석 리포트</b> ← 핵심<br/>
+점수 옆에 <b>왜 그 점수인지</b>가 항상 붙습니다. 아래 참조.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/screenshots/community.png" width="100%" /><br/>
+<b>커뮤니티</b><br/>
+성분에 대한 질문과 후기. 협찬 표기 여부·구매 인증 비율을 뱃지로 드러냅니다.
+</td>
+<td width="50%" valign="top">
+<img src="docs/screenshots/profile.png" width="100%" /><br/>
+<b>프로필</b><br/>
+최근 스캔 이력에서 바로 리포트로 들어갑니다.
+</td>
+</tr>
+</table>
 
-<img src="docs/screenshots/welcome.png" width="300" />
-
-같은 제품이라도 당뇨가 있는 사람과 임산부에게 같은 점수일 수 없습니다.
-설문에서 받은 목표·질환을 감점 가중치로 옮깁니다 (당뇨 → 당류 ×1.5, 임신 → 카페인 ×2.0).
-
-### 바코드 스캔
-
-<img src="docs/screenshots/scan.png" width="300" />
-
-`html5-qrcode`로 카메라에서 바코드를 읽고, 3단 폴백으로 제품을 찾습니다.
-내장 DB → 사용자 등록 DB → Open Food Facts.
-
-### 사진 분석 리포트 — 이 프로젝트의 핵심
-
-<img src="docs/screenshots/report.png" width="300" />
-
-점수 옆에 **왜 그 점수인지**가 항상 붙습니다.
+### 리포트가 보여주는 것
 
 - **주의 성분** — 감점액과 함께, 사진에 찍힌 표기까지 (`L-글루탐산나트륨 (표기: 향미증진제)`)
 - **미확인 성분** — DB에 없어 평가하지 못한 것을 **숨기지 않고 목록으로** 보여줍니다.
   "감점이 없다"가 "안전하다"로 읽히면 안 되기 때문입니다.
 - **신뢰도** — 판독 품질과 DB 커버리지가 함께 매깁니다. 낮아진 이유를 문장으로 적습니다.
 - 리포트를 이미지로 저장·공유 (`html-to-image`)
-
-### 커뮤니티
-
-<img src="docs/screenshots/community.png" width="300" />
-
-성분에 대한 질문과 후기. 협찬 표기 여부·구매 인증 비율을 뱃지로 드러냅니다.
-
-### 프로필
-
-<img src="docs/screenshots/profile.png" width="300" />
-
-최근 스캔 이력에서 바로 리포트로 들어갑니다.
 
 ---
 
@@ -130,6 +191,9 @@ Vision이 104를 정확히 읽었으므로 차단선은 그보다 한참 아래�
 포장 전체를 찍으면 성분표 글자가 전체 화소의 몇 %입니다. 축소해 업로드하면 그 글자가 먼저
 뭉개집니다. 필요한 영역만 잘라 보내면 같은 업로드 크기로 글자 해상도가 몇 배 올라갑니다 —
 판독 정확도의 손잡이는 모델이 아니라 이쪽입니다.
+
+> 지금은 사용자가 직접 크롭합니다. **YOLO로 성분표 영역을 자동 검출해 이 단계를 없앨 예정**입니다
+> (아래 [다음 단계](#다음-단계) 참조).
 
 ---
 
@@ -199,6 +263,40 @@ src/
    경고만 합니다.
 4. **팩트체크·대안 제품은 실제 데이터 소스가 없습니다.** 후기·신뢰뱃지와 함께 데모
    데이터를 얹었고, 화면에서 어느 쪽이 실제 분석인지 배지로 구분합니다.
+
+---
+
+## 다음 단계
+
+### YOLO 기반 성분표 자동 검출 (예정)
+
+지금 파이프라인에서 **정확도를 가장 크게 좌우하는 건 크롭**입니다. 그런데 그 크롭을
+사용자가 손으로 합니다 — 한 단계 더 거쳐야 하고, 대충 자르면 판독이 나빠집니다.
+
+**YOLO로 포장지에서 표시사항 블록(원재료명·영양정보 표)을 검출해 자동으로 잘라낼 계획**입니다.
+
+```
+현재   촬영 → 품질 검사 → [사용자가 직접 크롭] → Claude Vision 판독
+예정   촬영 → 품질 검사 → [YOLO 영역 검출 → 자동 크롭] → Claude Vision 판독
+                            ↑ 실시간 프리뷰에서 성분표를 찾아 프레임으로 표시
+```
+
+기대 효과
+
+- **단계 제거** — 촬영하면 바로 결과. 크롭 화면을 거치지 않습니다.
+- **정확도 상향** — 사람이 자르는 것보다 경계가 일정합니다. 여백이 줄어드는 만큼
+  같은 업로드 크기에서 글자 해상도가 올라갑니다.
+- **촬영 유도** — 프리뷰에서 성분표를 못 찾으면 셔터 전에 알려줄 수 있습니다.
+  지금은 찍고 나서야 흐림을 판정합니다.
+
+> **현재 코드에 YOLO는 들어 있지 않습니다.** 관련 의존성도 없습니다.
+> 지금의 가이드 프레임과 수동 크롭이 이 자리를 대신하고 있습니다.
+
+### 그 외
+
+- **성분 DB 확장** — 14종 샘플 → 식약처 식품첨가물 데이터 기반 확장
+- **빛 반사 감지 재보정** — 실제 제품 사진(색·질감 있는 배경)으로 임계값 다시 잡기
+- **팩트체크 실제 소스 연결**
 
 ---
 
