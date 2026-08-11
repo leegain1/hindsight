@@ -9,6 +9,9 @@
 
 > 국민대학교 **SYNC 연합학술제** 출품작 (경영학부 · KIBS · 소프트웨어학부)
 
+> [연합학술제 발표 ppt.pdf](https://github.com/user-attachments/files/30927536/ppt.pdf)
+
+
 ---
 
 ## 왜 만들었나
